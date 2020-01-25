@@ -6,6 +6,7 @@ public class Node {
   public Vector3 position;
   public bool isTip;
   public Node parent;
+  public List<Node> children;
   public float radius;
 
   public List<Attractor> influencedBy;
@@ -17,5 +18,6 @@ public class Node {
     radius = _radius;
 
     influencedBy = new List<Attractor>();
+    children = new List<Node>();
   }
 }
