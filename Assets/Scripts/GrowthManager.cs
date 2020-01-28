@@ -4,7 +4,7 @@ using UnityEngine;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
-  float AttractionDistance = 50f;
+  float AttractionDistance = 70f;
   float KillDistance = 10f;
   float SegmentLength = 10;
   float RadiusIncrement = .01f;
@@ -12,98 +12,119 @@ public class GrowthManager : MonoBehaviour {
   int timeToRun = 10;
   bool branchesCompiled = false;
 
-  GameObject attractorContainer;
-
   private List<Attractor> _attractors;
   private List<Node> _nodes;
   private List<List<Vector3>> _branches;
 
-  private List<GameObject> _nodeObjects;
-
   private KDTree _nodeTree;               // spatial index of vein nodes
-  private KDTree _tipTree;                // spatial index of vein tip nodes
   private KDQuery query = new KDQuery();  // query object for spatial indices
 
   private MeshFilter filter;
 
   void Start() {
+    // Set up a mesh filter on this GameObject
     gameObject.AddComponent<MeshRenderer>();
     filter = gameObject.AddComponent<MeshFilter>();
 
-    // Initialize attractor variables
-    _attractors = new List<Attractor>();
+    CreateAttractors();
+    CreateRootVeins();
 
-    // Populate attractors
-    // for (int i = 0; i < 3000; i++) {
-    //   _attractors.Add(new Attractor(Random.insideUnitSphere * 400));
-    // }
-
-    int spacing = 40;
-    int rowResolution = 30;
-    int colResolution = 100;
-
-    for(int row = 0; row < rowResolution; row++) {
-      for(int col = 0; col < colResolution; col++) {
-        _attractors.Add(
-          new Attractor(
-            new Vector3(
-              col * spacing + Random.Range(-spacing/2, spacing/2),
-              row * spacing + Random.Range(-spacing/2, spacing/2),
-              0
-            )
-          )
-        );
-      }
-    }
-
-    // Initialize node variables
-    _nodes = new List<Node>();
-
-    // Add a single vein node at the origin to seed growth
-    _nodes.Add(
-      new Node(
-        // new Vector3((colResolution*spacing)/2,(rowResolution*spacing)/2,0),
-        new Vector3(0,(rowResolution*spacing)/2,0),
-        // Vector3.zero,
-        null,
-        true,
-        1
-      )
-    );
-
-    // Build the vein node spatial index for the first time
     BuildSpatialIndex();
   }
 
+    void CreateAttractors() {
+      _attractors = new List<Attractor>();
+
+      // Points in a sphere
+      // for (int i = 0; i < 1000; i++) {
+      //   _attractors.Add(new Attractor(Random.insideUnitSphere * 300));
+      // }
+
+      // Points in a 3D grid
+      int spacing = 30;
+      int rowResolution = 10;
+      int colResolution = 30;
+      int depthResolution = 10;
+
+      for(int row = 0; row < rowResolution; row++) {
+        for(int col = 0; col < colResolution; col++) {
+          for(int depth = 0; depth < depthResolution; depth++) {
+            _attractors.Add(
+              new Attractor(
+                new Vector3(
+                  col * spacing + Random.Range(-spacing/2, spacing/2),
+                  row * spacing + Random.Range(-spacing/2, spacing/2),
+                  depth * spacing + Random.Range(-spacing/2, spacing/2)
+                )
+              )
+            );
+          }
+        }
+      }
+    }
+
+    void CreateRootVeins() {
+      // Initialize node variables
+      _nodes = new List<Node>();
+
+      // Add a single vein node at the origin to seed growth
+      _nodes.Add(
+        new Node(
+          new Vector3((30*30)/2, (10*30)/2, (10*30)/2),
+          // Vector3.zero,
+          null,
+          true,
+          1
+        )
+      );
+    }
+
   void Update() {
     // if(Time.time < timeToRun) {
-
       // Reset lists of attractors that vein nodes were attracted to last cycle
       foreach(Node node in _nodes) {
         node.influencedBy.Clear();
       }
 
       // 1. Associate attractors with vein nodes ===========================================================================
+      AssociateAttractors();
+
+      // 2. Add vein nodes onto every vein node that is being influenced. =================================================
+      GrowNetwork();
+
+      // 3. Remove attractors that have been reached by their vein nodes ==================================================
+      PruneAttractors();
+
+      // 5. Rebuild vein node spatial index with latest vein nodes =========================================================
+      BuildSpatialIndex();
+
+    // } else {
+    //   if(!branchesCompiled) {
+    //     GenerateBranchMeshes();
+    //     branchesCompiled = true;
+    //   }
+    // }
+  }
+
+    void AssociateAttractors() {
       foreach(Attractor attractor in _attractors) {
         attractor.isInfluencing.Clear();
         attractor.isReached = false;
         List<int> nodesInAttractionZone = new List<int>();
 
-        // a. Open venation = closest vein node only
+        // a. Open venation = closest vein node only ---------------------------------------------------------------------
+        query.ClosestPoint(_nodeTree, attractor.position, nodesInAttractionZone);
 
-          // i. Query the vein node spatial index for nearest vein node within AttractionDistance (will return index)
-          // query.Radius(_nodeTree, attractorPosition, AttractionDistance, nodesInAttractionZone);
-          query.ClosestPoint(_nodeTree, attractor.position, nodesInAttractionZone);
+        // ii. If a vein node is found, associate it by pushing attractor ID to _nodeInfluencedBy
+        if(nodesInAttractionZone.Count > 0) {
+          Node closestNode = null;
 
-          // TODO: get the nearby nodes using the physics engine
-          // Collider[] nearbyNodes = Physics.OverlapSphere(attractor.position, AttractionDistance);
-
-          // ii. If a vein node is found, associate it by pushing attractor ID to _nodeInfluencedBy
-          if(nodesInAttractionZone.Count > 0) {
-            Node closestNode = null;
-
+          if(nodesInAttractionZone.Count == 1) {
+            closestNode = _nodes[nodesInAttractionZone[0]];
+          } else {
             float smallestDistanceSqr = AttractionDistance * AttractionDistance;
 
+            // Find the nearest node
             foreach(int nodeID in nodesInAttractionZone) {
               float distance = (attractor.position - _nodes[nodeID].position).sqrMagnitude;
 
@@ -112,23 +133,25 @@ public class GrowthManager : MonoBehaviour {
                 smallestDistanceSqr = distance;
               }
             }
+          }
 
-            if(closestNode != null) {
-              closestNode.influencedBy.Add(attractor);
+          if(closestNode != null) {
+            closestNode.influencedBy.Add(attractor);
 
-              if((attractor.position - closestNode.position).sqrMagnitude > KillDistance * KillDistance) {
-                attractor.isReached = false;
-              } else {
-                attractor.isReached = true;
-              }
+            if((attractor.position - closestNode.position).sqrMagnitude > KillDistance * KillDistance) {
+              attractor.isReached = false;
+            } else {
+              attractor.isReached = true;
             }
           }
+        }
 
         // b. Closed venation = all vein nodes in relative neighborhood
 
       }
+    }
 
-      // 2. Add vein nodes onto every vein node that is being influenced. =================================================
+    void GrowNetwork() {
       List<Node> newNodes = new List<Node>();
 
       foreach(Node node in _nodes) {
@@ -165,8 +188,9 @@ public class GrowthManager : MonoBehaviour {
           currentNode = currentNode.parent;
         }
       }
+    }
 
-      // 3. Remove attractors that have been reached by their vein nodes ==================================================
+    void PruneAttractors() {
       List<Attractor> attractorsToRemove = new List<Attractor>();
 
       foreach(Attractor attractor in _attractors) {
@@ -181,64 +205,58 @@ public class GrowthManager : MonoBehaviour {
       foreach(Attractor attractor in attractorsToRemove) {
         _attractors.Remove(attractor);
       }
+    }
 
-      // 5. Rebuild vein node spatial index with latest vein nodes =========================================================
-      BuildSpatialIndex();
+    void GenerateBranchMeshes() {
+      _branches = new List<List<Vector3>>();
+      GetBranch(_nodes[0]);
 
-    // } else {
-    //   if(!branchesCompiled) {
-        // 4. Perform vein thickening ========================================================================================
-        _branches = new List<List<Vector3>>();
-        GetBranch(_nodes[0]);
+      CombineInstance[] combineInstances = new CombineInstance[_branches.Count];
 
-			  CombineInstance[] combineInstances = new CombineInstance[_branches.Count];
+      int t = 0;
+      foreach(List<Vector3> branch in _branches) {
+        TubeRenderer tube = new GameObject().AddComponent<TubeRenderer>();
+        tube.points = new Vector3[branch.Count];
+        tube.radiuses = new float[branch.Count];
 
-        int t = 0;
-        foreach(List<Vector3> branch in _branches) {
-          TubeRenderer tube = new GameObject().AddComponent<TubeRenderer>();
-          tube.points = new Vector3[branch.Count];
-			  	tube.radiuses = new float[branch.Count];
-
-          for(int j=0; j<branch.Count; j++) {
-            tube.points[j] = branch[j];
-            tube.radiuses[j] = 10f;
-          }
-
-          tube.ForceUpdate();
-
-          combineInstances[t].mesh = tube.mesh;
-          combineInstances[t].transform = tube.transform.localToWorldMatrix;
-
-          Destroy(tube.gameObject);
-
-          t++;
+        for(int j=0; j<branch.Count; j++) {
+          tube.points[j] = branch[j];
+          tube.radiuses[j] = 1f;
         }
 
-        filter.mesh.CombineMeshes(combineInstances);
+        tube.ForceUpdate();
 
-        // GetComponent<Renderer>().material = new Material( Shader.Find( "Diffuse" ) );
-			  // GetComponent<Renderer>().material.mainTexture = CreateTileTexture(2);
+        combineInstances[t].mesh = tube.mesh;
+        combineInstances[t].transform = tube.transform.localToWorldMatrix;
 
-        branchesCompiled = true;
-      // }
-    // }
-  }
+        Destroy(tube.gameObject);
+
+        t++;
+      }
+
+      filter.mesh.CombineMeshes(combineInstances);
+
+      GetComponent<Renderer>().material = new Material(Shader.Find("Diffuse"));
+      // GetComponent<Renderer>().material.mainTexture = CreateTileTexture(2);
+    }
 
   void OnDrawGizmos() {
     if(Application.isPlaying) {
       // Draw a spheres for all attractors
-      foreach(Attractor attractor in _attractors) {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawSphere(attractor.position, 1);
-      }
+      // Gizmos.color = Color.yellow;
+      // foreach(Attractor attractor in _attractors) {
+      //   Gizmos.DrawSphere(attractor.position, 1);
+      // }
 
       // Draw lines to connect each vein node
+      // Gizmos.color = Random.ColorHSV();
+      Gizmos.color = Color.white;
       foreach(Node node in _nodes) {
-        if(node.parent != null) {
-          // Gizmos.color = Random.ColorHSV();
-          Gizmos.color = Color.white;
-          Gizmos.DrawLine(node.parent.position, node.position);
-        }
+        // if(node.parent != null) {
+        //   Gizmos.DrawLine(node.parent.position, node.position);
+        // }
+
+        Gizmos.DrawSphere(node.position, 1);
       }
     }
   }
@@ -252,10 +270,6 @@ public class GrowthManager : MonoBehaviour {
     }
 
     _nodeTree = new KDTree(nodePositions.ToArray());
-
-    // TODO: try only indexing the tips
-    // Vector3[] test = _nodePositions.Where(node => _nodeIsTip[_nodePositions.IndexOf(node)]).ToArray();
-    // _tipTree = new KDTree(test);
   }
 
   private Vector3 GetAverageDirection(Node node, List<Attractor> attractors) {
