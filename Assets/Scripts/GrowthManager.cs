@@ -9,12 +9,15 @@ public class GrowthManager : MonoBehaviour {
   float SegmentLength = 10;
   float RadiusIncrement = .01f;
 
-  int timeToRun = 10;
-  bool branchesCompiled = false;
+  float timeToRun = 3f;
+  float meshingInterval = .3f;
+  float lastMeshTime = 0;
+  bool meshCompiled = false;
 
   private List<Attractor> _attractors;
   private List<Node> _nodes;
   private List<List<Vector3>> _branches;
+  private List<CombineInstance> _branchMeshes = new List<CombineInstance>();
 
   private KDTree _nodeTree;               // spatial index of vein nodes
   private KDQuery query = new KDQuery();  // query object for spatial indices
@@ -25,6 +28,8 @@ public class GrowthManager : MonoBehaviour {
     // Set up a mesh filter on this GameObject
     gameObject.AddComponent<MeshRenderer>();
     filter = gameObject.AddComponent<MeshFilter>();
+    filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+    GetComponent<Renderer>().material = new Material(Shader.Find("Diffuse"));
 
     CreateAttractors();
     CreateRootVeins();
@@ -41,10 +46,10 @@ public class GrowthManager : MonoBehaviour {
       // }
 
       // Points in a 3D grid
-      int spacing = 30;
-      int rowResolution = 10;
-      int colResolution = 30;
-      int depthResolution = 10;
+      int spacing = 60;
+      int rowResolution = 5;
+      int colResolution = 15;
+      int depthResolution = 5;
 
       for(int row = 0; row < rowResolution; row++) {
         for(int col = 0; col < colResolution; col++) {
@@ -64,23 +69,22 @@ public class GrowthManager : MonoBehaviour {
     }
 
     void CreateRootVeins() {
-      // Initialize node variables
       _nodes = new List<Node>();
 
-      // Add a single vein node at the origin to seed growth
-      _nodes.Add(
-        new Node(
-          new Vector3((30*30)/2, (10*30)/2, (10*30)/2),
-          // Vector3.zero,
-          null,
-          true,
-          1
-        )
+      // Single root vein
+      Node rootNode = new Node(
+        // new Vector3((30*30)/2, (10*30)/2, (10*30)/2),
+        Vector3.zero,
+        null,
+        true,
+        1
       );
+
+      _nodes.Add(rootNode);
     }
 
   void Update() {
-    // if(Time.time < timeToRun) {
+    if(Time.time < timeToRun) {
       // Reset lists of attractors that vein nodes were attracted to last cycle
       foreach(Node node in _nodes) {
         node.influencedBy.Clear();
@@ -98,12 +102,19 @@ public class GrowthManager : MonoBehaviour {
       // 5. Rebuild vein node spatial index with latest vein nodes =========================================================
       BuildSpatialIndex();
 
-    // } else {
-    //   if(!branchesCompiled) {
-    //     GenerateBranchMeshes();
-    //     branchesCompiled = true;
-    //   }
-    // }
+
+    } else {
+      if(!meshCompiled) {
+      // if(Time.time >= lastMeshTime + meshingInterval) {
+        filter.mesh.CombineMeshes(_branchMeshes.ToArray());
+
+        // Generate tube mesh recursively - smoother, but slower
+        // GenerateBranchMeshes();
+
+        meshCompiled = true;
+        // lastMeshTime = Time.time;
+      }
+    }
   }
 
     void AssociateAttractors() {
@@ -168,11 +179,39 @@ public class GrowthManager : MonoBehaviour {
           // Since this vein node is spawning a new one, it is no longer a tip
           node.isTip = false;
 
-          Node newNode = new Node(newNodePosition, node, true, 1);
+          // Create the new node
+          Node newNode = new Node(
+            newNodePosition,
+            node,
+            true,
+            1
+          );
 
           node.children.Add(newNode);
-
           newNodes.Add(newNode);
+
+          // Create a new tube mesh for this segment.
+          CombineInstance combineInstance = new CombineInstance();
+          TubeRenderer tube = new GameObject().AddComponent<TubeRenderer>();
+          tube.points = new Vector3[3];
+          tube.radiuses = new float[3];
+          tube.edgeCount = 5;
+
+          tube.points[0] = node.parent != null ? node.parent.position : new Vector3(0,0,0); // go back two nodes for smoother radius transitions and prevent joint gaps
+          tube.points[1] = node.position;
+          tube.points[2] = newNode.position;
+          tube.radiuses[0] = 1f;
+          tube.radiuses[1] = 1f;
+          tube.radiuses[2] = 1f;
+
+          tube.ForceUpdate();
+
+          combineInstance.mesh = tube.mesh;
+          combineInstance.transform = tube.transform.localToWorldMatrix;
+
+          _branchMeshes.Add(combineInstance);
+
+          Destroy(tube.gameObject);
         }
       }
 
@@ -218,6 +257,7 @@ public class GrowthManager : MonoBehaviour {
         TubeRenderer tube = new GameObject().AddComponent<TubeRenderer>();
         tube.points = new Vector3[branch.Count];
         tube.radiuses = new float[branch.Count];
+        tube.edgeCount = 5;
 
         for(int j=0; j<branch.Count; j++) {
           tube.points[j] = branch[j];
@@ -243,20 +283,20 @@ public class GrowthManager : MonoBehaviour {
   void OnDrawGizmos() {
     if(Application.isPlaying) {
       // Draw a spheres for all attractors
-      // Gizmos.color = Color.yellow;
-      // foreach(Attractor attractor in _attractors) {
-      //   Gizmos.DrawSphere(attractor.position, 1);
-      // }
+      Gizmos.color = Color.yellow;
+      foreach(Attractor attractor in _attractors) {
+        Gizmos.DrawSphere(attractor.position, 1);
+      }
 
       // Draw lines to connect each vein node
       // Gizmos.color = Random.ColorHSV();
       Gizmos.color = Color.white;
       foreach(Node node in _nodes) {
-        // if(node.parent != null) {
-        //   Gizmos.DrawLine(node.parent.position, node.position);
-        // }
+        if(node.parent != null) {
+          Gizmos.DrawLine(node.parent.position, node.position);
+        }
 
-        Gizmos.DrawSphere(node.position, 1);
+        // Gizmos.DrawSphere(node.position, 1);
       }
     }
   }
