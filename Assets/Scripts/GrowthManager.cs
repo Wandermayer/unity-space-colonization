@@ -10,13 +10,14 @@ public class GrowthManager : MonoBehaviour {
   float RadiusIncrement = .01f;
 
   float timeToRun = 3f;
-  float meshingInterval = .3f;
+  float meshingInterval = .5f;
   float lastMeshTime = 0;
   bool meshCompiled = false;
 
   private List<Attractor> _attractors;
   private List<Node> _nodes;
   private List<List<Vector3>> _branches;
+  private List<List<float>> _radii;
   private List<CombineInstance> _branchMeshes = new List<CombineInstance>();
 
   private KDTree _nodeTree;               // spatial index of vein nodes
@@ -30,6 +31,7 @@ public class GrowthManager : MonoBehaviour {
     filter = gameObject.AddComponent<MeshFilter>();
     filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
     GetComponent<Renderer>().material = new Material(Shader.Find("Diffuse"));
+    // GetComponent<Renderer>().material = Resources.Load("Bark_20", typeof(Material)) as Material;
 
     CreateAttractors();
     CreateRootVeins();
@@ -73,18 +75,18 @@ public class GrowthManager : MonoBehaviour {
 
       // Single root vein
       Node rootNode = new Node(
-        // new Vector3((30*30)/2, (10*30)/2, (10*30)/2),
-        Vector3.zero,
+        new Vector3((15*60)/2, (5*60)/2, (5*60)/2),
+        // Vector3.zero,
         null,
         true,
-        1
+        5f
       );
 
       _nodes.Add(rootNode);
     }
 
   void Update() {
-    if(Time.time < timeToRun) {
+    // if(Time.time < timeToRun) {
       // Reset lists of attractors that vein nodes were attracted to last cycle
       foreach(Node node in _nodes) {
         node.influencedBy.Clear();
@@ -103,18 +105,19 @@ public class GrowthManager : MonoBehaviour {
       BuildSpatialIndex();
 
 
-    } else {
-      if(!meshCompiled) {
+    // } else {
+    //   if(!meshCompiled) {
       // if(Time.time >= lastMeshTime + meshingInterval) {
+        // Generate tube mesh from iterative method
         filter.mesh.CombineMeshes(_branchMeshes.ToArray());
 
         // Generate tube mesh recursively - smoother, but slower
         // GenerateBranchMeshes();
 
-        meshCompiled = true;
+        // meshCompiled = true;
         // lastMeshTime = Time.time;
-      }
-    }
+      // }
+    // }
   }
 
     void AssociateAttractors() {
@@ -184,7 +187,7 @@ public class GrowthManager : MonoBehaviour {
             newNodePosition,
             node,
             true,
-            1
+            node.radius * .98f
           );
 
           node.children.Add(newNode);
@@ -193,16 +196,16 @@ public class GrowthManager : MonoBehaviour {
           // Create a new tube mesh for this segment.
           CombineInstance combineInstance = new CombineInstance();
           TubeRenderer tube = new GameObject().AddComponent<TubeRenderer>();
-          tube.points = new Vector3[3];
-          tube.radiuses = new float[3];
-          tube.edgeCount = 5;
+          tube.points = new Vector3[2];
+          tube.radiuses = new float[2];
+          // tube.edgeCount = 5;
 
-          tube.points[0] = node.parent != null ? node.parent.position : new Vector3(0,0,0); // go back two nodes for smoother radius transitions and prevent joint gaps
-          tube.points[1] = node.position;
-          tube.points[2] = newNode.position;
-          tube.radiuses[0] = 1f;
-          tube.radiuses[1] = 1f;
-          tube.radiuses[2] = 1f;
+          // tube.points[0] = node.parent != null ? node.parent.position : new Vector3(0,0,0); // go back two nodes for smoother radius transitions and prevent joint gaps
+          tube.points[0] = node.position;
+          tube.points[1] = newNode.position;
+          // tube.radiuses[0] = node.parent != null ? node.parent.radius : 5f;
+          tube.radiuses[0] = node.radius;
+          tube.radiuses[1] = newNode.radius;
 
           tube.ForceUpdate();
 
@@ -248,6 +251,7 @@ public class GrowthManager : MonoBehaviour {
 
     void GenerateBranchMeshes() {
       _branches = new List<List<Vector3>>();
+      _radii = new List<List<float>>();
       GetBranch(_nodes[0]);
 
       CombineInstance[] combineInstances = new CombineInstance[_branches.Count];
@@ -257,11 +261,11 @@ public class GrowthManager : MonoBehaviour {
         TubeRenderer tube = new GameObject().AddComponent<TubeRenderer>();
         tube.points = new Vector3[branch.Count];
         tube.radiuses = new float[branch.Count];
-        tube.edgeCount = 5;
+        // tube.edgeCount = 5;
 
         for(int j=0; j<branch.Count; j++) {
           tube.points[j] = branch[j];
-          tube.radiuses[j] = 1f;
+          tube.radiuses[j] = _radii[t][j];
         }
 
         tube.ForceUpdate();
@@ -334,10 +338,18 @@ public class GrowthManager : MonoBehaviour {
 
   private void GetBranch(Node startingNode) {
     List<Vector3> thisBranch = new List<Vector3>();
+    List<float> thisRadii = new List<float>();
     Node currentNode = startingNode;
 
     if(currentNode.parent != null) {
       thisBranch.Add(currentNode.parent.position);
+      thisRadii.Add(currentNode.parent.radius * .98f);
+    }
+
+    if(currentNode.parent != null) {
+      thisRadii.Add(currentNode.parent.radius * .98f);
+    } else {
+      thisRadii.Add(5f);
     }
 
     thisBranch.Add(currentNode.position);
@@ -345,6 +357,13 @@ public class GrowthManager : MonoBehaviour {
     while(currentNode != null && currentNode.children.Count > 0) {
       if(currentNode.children.Count == 1) {
         thisBranch.Add(currentNode.children[0].position);
+
+        if(currentNode.parent != null) {
+          thisRadii.Add(currentNode.parent.radius * .98f);
+        } else {
+          thisRadii.Add(5f);
+        }
+
         currentNode = currentNode.children[0];
       } else {
         foreach(Node childNode in currentNode.children) {
@@ -356,6 +375,7 @@ public class GrowthManager : MonoBehaviour {
     }
 
     _branches.Add(thisBranch);
+    _radii.Add(thisRadii);
   }
 
   public static Texture2D CreateTileTexture( int sqrTileCount ) {
