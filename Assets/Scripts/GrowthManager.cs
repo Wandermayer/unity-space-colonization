@@ -109,10 +109,10 @@ public class GrowthManager : MonoBehaviour {
     //   if(!meshCompiled) {
       // if(Time.time >= lastMeshTime + meshingInterval) {
         // Generate tube mesh from iterative method
-        filter.mesh.CombineMeshes(_branchMeshes.ToArray());
+        // filter.mesh.CombineMeshes(_branchMeshes.ToArray());
 
         // Generate tube mesh recursively - smoother, but slower
-        // GenerateBranchMeshes();
+        GenerateBranchMeshes();
 
         // meshCompiled = true;
         // lastMeshTime = Time.time;
@@ -265,7 +265,8 @@ public class GrowthManager : MonoBehaviour {
 
         for(int j=0; j<branch.Count; j++) {
           tube.points[j] = branch[j];
-          tube.radiuses[j] = _radii[t][j];
+          // tube.radiuses[j] = _radii[t][j];
+          tube.radiuses[j] = 5f;
         }
 
         tube.ForceUpdate();
@@ -349,7 +350,7 @@ public class GrowthManager : MonoBehaviour {
     if(currentNode.parent != null) {
       thisRadii.Add(currentNode.parent.radius * .98f);
     } else {
-      thisRadii.Add(5f);
+      thisRadii.Add(3f);
     }
 
     thisBranch.Add(currentNode.position);
@@ -361,7 +362,7 @@ public class GrowthManager : MonoBehaviour {
         if(currentNode.parent != null) {
           thisRadii.Add(currentNode.parent.radius * .98f);
         } else {
-          thisRadii.Add(5f);
+          thisRadii.Add(3f);
         }
 
         currentNode = currentNode.children[0];
