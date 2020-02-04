@@ -5,7 +5,7 @@ using UnityEngine.Profiling;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
-  float AttractionDistance = 20f;
+  float AttractionDistance = 120f;
   float KillDistance = 10f;
   float SegmentLength = 10;
   float RadiusIncrement = .01f;
@@ -15,12 +15,18 @@ public class GrowthManager : MonoBehaviour {
   float lastMeshTime = 0;
   bool meshCompiled = false;
 
+  bool isPaused = true;
+
   TubeRenderer tube;
 
-  private List<Attractor> _attractors;
-  private List<Node> _nodes;
-  private List<List<Vector3>> _branches;
-  private List<List<float>> _radii;
+  private List<Attractor> _attractors = new List<Attractor>();
+  private List<Attractor> _attractorsToRemove = new List<Attractor>();
+  private List<Node> _rootNodes = new List<Node>();
+  private List<Node> _nodes = new List<Node>();
+  private List<int> _nodesInAttractionZone = new List<int>();
+  private List<Node> _nodesToAdd = new List<Node>();
+  private List<List<Vector3>> _branches = new List<List<Vector3>>();
+  private List<List<float>> _radii = new List<List<float>>();
   private List<CombineInstance> _branchMeshes = new List<CombineInstance>();
 
   private KDTree _nodeTree;               // spatial index of vein nodes
@@ -47,7 +53,7 @@ public class GrowthManager : MonoBehaviour {
   }
 
     void CreateAttractors() {
-      _attractors = new List<Attractor>();
+      _attractors.Clear();
 
       // Points in a sphere
       // for (int i = 0; i < 1000; i++) {
@@ -55,10 +61,10 @@ public class GrowthManager : MonoBehaviour {
       // }
 
       // Points in a 3D grid
-      int spacing = 60;
+      int spacing = 100;
       int rowResolution = 10;
       int colResolution = 30;
-      int depthResolution = 10;
+      int depthResolution = 15;
 
       for(int row = 0; row < rowResolution; row++) {
         for(int col = 0; col < colResolution; col++) {
@@ -78,21 +84,44 @@ public class GrowthManager : MonoBehaviour {
     }
 
     void CreateRootVeins() {
-      _nodes = new List<Node>();
+      _nodes.Clear();
 
       // Single root vein
-      Node rootNode = new Node(
-        // new Vector3((15*60)/2, (5*60)/2, (5*60)/2),
-        Vector3.zero,
-        null,
-        true,
-        5f
+      _rootNodes.Add(
+        new Node(
+          // new Vector3((15*60)/2, (5*60)/2, (5*60)/2),
+          Vector3.zero,
+          null,
+          true,
+          5f
+        )
       );
 
-      _nodes.Add(rootNode);
+      // for(int i=0; i<3; i++) {
+      //   _rootNodes.Add(
+      //     new Node(
+      //       Random.insideUnitSphere * 100,
+      //       null,
+      //       true,
+      //       5f
+      //     )
+      //   );
+      // }
+
+      foreach(Node rootNode in _rootNodes) {
+        _nodes.Add(rootNode);
+      }
     }
 
   void Update() {
+    if(Input.GetKeyUp("space")) {
+      isPaused = !isPaused;
+    }
+
+    if(isPaused) {
+      return;
+    }
+
     // if(Time.time < timeToRun) {
       // Reset lists of attractors that vein nodes were attracted to last cycle
       foreach(Node node in _nodes) {
@@ -115,11 +144,8 @@ public class GrowthManager : MonoBehaviour {
     // 6. Generate tube meshes to render the vein network ==================================================================
 
     // } else {
-    //   if(!meshCompiled) {
+      // if(!meshCompiled) {
       // if(Time.time >= lastMeshTime + meshingInterval) {
-        // Generate tube mesh from iterative method
-        // filter.mesh.CombineMeshes(_branchMeshes.ToArray());
-
         // Generate tube mesh recursively - smoother, but slower. Much better texturing!
         GenerateBranchMeshes();
 
@@ -135,14 +161,14 @@ public class GrowthManager : MonoBehaviour {
       foreach(Attractor attractor in _attractors) {
         attractor.isInfluencing.Clear();
         attractor.isReached = false;
-        List<int> nodesInAttractionZone = new List<int>();
+        _nodesInAttractionZone.Clear();
 
         // a. Open venation = closest vein node only ---------------------------------------------------------------------
-        query.ClosestPoint(_nodeTree, attractor.position, nodesInAttractionZone);
+        query.ClosestPoint(_nodeTree, attractor.position, _nodesInAttractionZone);
 
         // ii. If a vein node is found, associate it by pushing attractor ID to _nodeInfluencedBy
-        if(nodesInAttractionZone.Count > 0) {
-          Node closestNode = _nodes[nodesInAttractionZone[0]];
+        if(_nodesInAttractionZone.Count > 0) {
+          Node closestNode = _nodes[_nodesInAttractionZone[0]];
           float distance = (attractor.position - closestNode.position).sqrMagnitude;
 
           if(distance <= AttractionDistance * AttractionDistance) {
@@ -166,7 +192,7 @@ public class GrowthManager : MonoBehaviour {
     void GrowNetwork() {
       Profiler.BeginSample("GrowNetwork");
 
-      List<Node> newNodes = new List<Node>();
+      _nodesToAdd.Clear();
 
       foreach(Node node in _nodes) {
         if(node.influencedBy.Count > 0) {
@@ -177,7 +203,7 @@ public class GrowthManager : MonoBehaviour {
           Vector3 newNodePosition = node.position + averageDirection * SegmentLength;
 
           // Add a random jitter to reduce split sources
-          // newNodePosition += new Vector3(Random.Range(-1,1), Random.Range(-1,1), Random.Range(-1,1));
+          newNodePosition += new Vector3(Random.Range(-1,1), Random.Range(-1,1), Random.Range(-1,1));
 
           // Since this vein node is spawning a new one, it is no longer a tip
           node.isTip = false;
@@ -191,7 +217,7 @@ public class GrowthManager : MonoBehaviour {
           );
 
           node.children.Add(newNode);
-          newNodes.Add(newNode);
+          _nodesToAdd.Add(newNode);
 
           /**
             Add a new discrete tube to the CombeInstance array. This method blows because "connected" tubes aren't actually connected, causing gaps at joints and texture tiling problems.
@@ -221,8 +247,8 @@ public class GrowthManager : MonoBehaviour {
       }
 
       // Add in the new vein nodes that have been produced
-      for(int i=0; i<newNodes.Count; i++) {
-        Node currentNode = newNodes[i];
+      for(int i=0; i<_nodesToAdd.Count; i++) {
+        Node currentNode = _nodesToAdd[i];
 
         _nodes.Add(currentNode);
 
@@ -239,18 +265,18 @@ public class GrowthManager : MonoBehaviour {
     void PruneAttractors() {
       Profiler.BeginSample("PruneAttractors");
 
-      List<Attractor> attractorsToRemove = new List<Attractor>();
+      _attractorsToRemove.Clear();
 
       foreach(Attractor attractor in _attractors) {
         // a. Open venation = as soon as the closest vein node enters KillDistance
         if(attractor.isReached) {
-          attractorsToRemove.Add(attractor);
+          _attractorsToRemove.Add(attractor);
         }
 
         // b. Closed venation = only when all vein nodes in relative neighborhood enter KillDistance
       }
 
-      foreach(Attractor attractor in attractorsToRemove) {
+      foreach(Attractor attractor in _attractorsToRemove) {
         _attractors.Remove(attractor);
       }
 
@@ -260,9 +286,12 @@ public class GrowthManager : MonoBehaviour {
     void GenerateBranchMeshes() {
       Profiler.BeginSample("GenerateBranchMeshes");
 
-      _branches = new List<List<Vector3>>();
-      _radii = new List<List<float>>();
-      GetBranch(_nodes[0]);
+      _branches.Clear();
+      _radii.Clear();
+
+      foreach(Node rootNode in _rootNodes) {
+        GetBranch(rootNode);
+      }
 
       CombineInstance[] combineInstances = new CombineInstance[_branches.Count];
 
@@ -274,7 +303,7 @@ public class GrowthManager : MonoBehaviour {
         for(int j=0; j<branch.Count; j++) {
           tube.points[j] = branch[j];
           // tube.radiuses[j] = _radii[t][j];
-          tube.radiuses[j] = 2f;
+          tube.radiuses[j] = 4f;
         }
 
         tube.ForceUpdate();
