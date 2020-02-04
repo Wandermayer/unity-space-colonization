@@ -142,28 +142,13 @@ public class GrowthManager : MonoBehaviour {
 
         // ii. If a vein node is found, associate it by pushing attractor ID to _nodeInfluencedBy
         if(nodesInAttractionZone.Count > 0) {
-          Node closestNode = null;
+          Node closestNode = _nodes[nodesInAttractionZone[0]];
+          float distance = (attractor.position - closestNode.position).sqrMagnitude;
 
-          if(nodesInAttractionZone.Count == 1) {
-            closestNode = _nodes[nodesInAttractionZone[0]];
-          } else {
-            float smallestDistanceSqr = AttractionDistance * AttractionDistance;
-
-            // Find the nearest node
-            foreach(int nodeID in nodesInAttractionZone) {
-              float distance = (attractor.position - _nodes[nodeID].position).sqrMagnitude;
-
-              if(distance < smallestDistanceSqr) {
-                closestNode = _nodes[nodeID];
-                smallestDistanceSqr = distance;
-              }
-            }
-          }
-
-          if(closestNode != null) {
+          if(distance <= AttractionDistance * AttractionDistance) {
             closestNode.influencedBy.Add(attractor);
 
-            if((attractor.position - closestNode.position).sqrMagnitude > KillDistance * KillDistance) {
+            if(distance > KillDistance * KillDistance) {
               attractor.isReached = false;
             } else {
               attractor.isReached = true;
