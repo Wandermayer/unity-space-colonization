@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Profiling;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
@@ -129,6 +130,8 @@ public class GrowthManager : MonoBehaviour {
   }
 
     void AssociateAttractors() {
+      Profiler.BeginSample("AssociateAttractors");
+
       foreach(Attractor attractor in _attractors) {
         attractor.isInfluencing.Clear();
         attractor.isReached = false;
@@ -171,9 +174,13 @@ public class GrowthManager : MonoBehaviour {
         // b. Closed venation = all vein nodes in relative neighborhood
 
       }
+
+      Profiler.EndSample();
     }
 
     void GrowNetwork() {
+      Profiler.BeginSample("GrowNetwork");
+
       List<Node> newNodes = new List<Node>();
 
       foreach(Node node in _nodes) {
@@ -240,9 +247,13 @@ public class GrowthManager : MonoBehaviour {
           currentNode = currentNode.parent;
         }
       }
+
+      Profiler.EndSample();
     }
 
     void PruneAttractors() {
+      Profiler.BeginSample("PruneAttractors");
+
       List<Attractor> attractorsToRemove = new List<Attractor>();
 
       foreach(Attractor attractor in _attractors) {
@@ -257,9 +268,13 @@ public class GrowthManager : MonoBehaviour {
       foreach(Attractor attractor in attractorsToRemove) {
         _attractors.Remove(attractor);
       }
+
+      Profiler.EndSample();
     }
 
     void GenerateBranchMeshes() {
+      Profiler.BeginSample("GenerateBranchMeshes");
+
       _branches = new List<List<Vector3>>();
       _radii = new List<List<float>>();
       GetBranch(_nodes[0]);
@@ -286,9 +301,13 @@ public class GrowthManager : MonoBehaviour {
       }
 
       filter.mesh.CombineMeshes(combineInstances);
+
+      Profiler.EndSample();
     }
 
   void OnDrawGizmos() {
+    Profiler.BeginSample("OnDrawGizmos");
+
     if(Application.isPlaying) {
       // Draw a spheres for all attractors
       Gizmos.color = Color.yellow;
@@ -307,9 +326,13 @@ public class GrowthManager : MonoBehaviour {
         // Gizmos.DrawSphere(node.position, 1);
       }
     }
+
+    Profiler.EndSample();
   }
 
   private void BuildSpatialIndex() {
+    Profiler.BeginSample("BuildSpatialIndex");
+
     // Create spatial index using _nodePositions
     List<Vector3> nodePositions = new List<Vector3>();
 
@@ -318,9 +341,13 @@ public class GrowthManager : MonoBehaviour {
     }
 
     _nodeTree = new KDTree(nodePositions.ToArray());
+
+    Profiler.EndSample();
   }
 
   private Vector3 GetAverageDirection(Node node, List<Attractor> attractors) {
+    Profiler.BeginSample("GetAverageDirection");
+
     Vector3 averageDirection = new Vector3(0,0,0);
 
     foreach(Attractor attractor in attractors) {
@@ -333,6 +360,8 @@ public class GrowthManager : MonoBehaviour {
     averageDirection /= attractors.Count;
     averageDirection.Normalize();
 
+    Profiler.EndSample();
+
     return averageDirection;
   }
 
@@ -341,6 +370,8 @@ public class GrowthManager : MonoBehaviour {
   }
 
   private void GetBranch(Node startingNode) {
+    Profiler.BeginSample("GetBranch");
+
     List<Vector3> thisBranch = new List<Vector3>();
     List<float> thisRadii = new List<float>();
     Node currentNode = startingNode;
@@ -370,5 +401,7 @@ public class GrowthManager : MonoBehaviour {
 
     _branches.Add(thisBranch);
     _radii.Add(thisRadii);
+
+    Profiler.EndSample();
   }
 }
