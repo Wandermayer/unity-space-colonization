@@ -4,7 +4,7 @@ using UnityEngine;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
-  float AttractionDistance = 70f;
+  float AttractionDistance = 20f;
   float KillDistance = 10f;
   float SegmentLength = 10;
   float RadiusIncrement = .01f;
@@ -13,6 +13,8 @@ public class GrowthManager : MonoBehaviour {
   float meshingInterval = .5f;
   float lastMeshTime = 0;
   bool meshCompiled = false;
+
+  TubeRenderer tube;
 
   private List<Attractor> _attractors;
   private List<Node> _nodes;
@@ -33,10 +35,14 @@ public class GrowthManager : MonoBehaviour {
     GetComponent<Renderer>().material = new Material(Shader.Find("Diffuse"));
     // GetComponent<Renderer>().material = Resources.Load("Bark_20", typeof(Material)) as Material;
 
+    // Set up the tube renderer
+    tube = new GameObject().AddComponent<TubeRenderer>();
+
     CreateAttractors();
     CreateRootVeins();
 
     BuildSpatialIndex();
+
   }
 
     void CreateAttractors() {
@@ -49,9 +55,9 @@ public class GrowthManager : MonoBehaviour {
 
       // Points in a 3D grid
       int spacing = 60;
-      int rowResolution = 5;
-      int colResolution = 15;
-      int depthResolution = 5;
+      int rowResolution = 10;
+      int colResolution = 30;
+      int depthResolution = 10;
 
       for(int row = 0; row < rowResolution; row++) {
         for(int col = 0; col < colResolution; col++) {
@@ -105,13 +111,15 @@ public class GrowthManager : MonoBehaviour {
       BuildSpatialIndex();
 
 
+    // 6. Generate tube meshes to render the vein network ==================================================================
+
     // } else {
     //   if(!meshCompiled) {
       // if(Time.time >= lastMeshTime + meshingInterval) {
         // Generate tube mesh from iterative method
         // filter.mesh.CombineMeshes(_branchMeshes.ToArray());
 
-        // Generate tube mesh recursively - smoother, but slower
+        // Generate tube mesh recursively - smoother, but slower. Much better texturing!
         GenerateBranchMeshes();
 
         // meshCompiled = true;
@@ -193,12 +201,15 @@ public class GrowthManager : MonoBehaviour {
           node.children.Add(newNode);
           newNodes.Add(newNode);
 
+          /**
+            Add a new discrete tube to the CombeInstance array. This method blows because "connected" tubes aren't actually connected, causing gaps at joints and texture tiling problems.
+          */
+
+          /*
           // Create a new tube mesh for this segment.
           CombineInstance combineInstance = new CombineInstance();
-          TubeRenderer tube = new GameObject().AddComponent<TubeRenderer>();
           tube.points = new Vector3[2];
           tube.radiuses = new float[2];
-          // tube.edgeCount = 5;
 
           // tube.points[0] = node.parent != null ? node.parent.position : new Vector3(0,0,0); // go back two nodes for smoother radius transitions and prevent joint gaps
           tube.points[0] = node.position;
@@ -209,12 +220,11 @@ public class GrowthManager : MonoBehaviour {
 
           tube.ForceUpdate();
 
-          combineInstance.mesh = tube.mesh;
+          combineInstance.mesh = Instantiate(tube.mesh);
           combineInstance.transform = tube.transform.localToWorldMatrix;
 
           _branchMeshes.Add(combineInstance);
-
-          Destroy(tube.gameObject);
+          */
         }
       }
 
@@ -258,31 +268,24 @@ public class GrowthManager : MonoBehaviour {
 
       int t = 0;
       foreach(List<Vector3> branch in _branches) {
-        TubeRenderer tube = new GameObject().AddComponent<TubeRenderer>();
         tube.points = new Vector3[branch.Count];
         tube.radiuses = new float[branch.Count];
-        // tube.edgeCount = 5;
 
         for(int j=0; j<branch.Count; j++) {
           tube.points[j] = branch[j];
           // tube.radiuses[j] = _radii[t][j];
-          tube.radiuses[j] = 5f;
+          tube.radiuses[j] = 2f;
         }
 
         tube.ForceUpdate();
 
-        combineInstances[t].mesh = tube.mesh;
+        combineInstances[t].mesh = Instantiate(tube.mesh);
         combineInstances[t].transform = tube.transform.localToWorldMatrix;
-
-        Destroy(tube.gameObject);
 
         t++;
       }
 
       filter.mesh.CombineMeshes(combineInstances);
-
-      GetComponent<Renderer>().material = new Material(Shader.Find("Diffuse"));
-      // GetComponent<Renderer>().material.mainTexture = CreateTileTexture(2);
     }
 
   void OnDrawGizmos() {
@@ -344,26 +347,16 @@ public class GrowthManager : MonoBehaviour {
 
     if(currentNode.parent != null) {
       thisBranch.Add(currentNode.parent.position);
-      thisRadii.Add(currentNode.parent.radius * .98f);
-    }
-
-    if(currentNode.parent != null) {
-      thisRadii.Add(currentNode.parent.radius * .98f);
-    } else {
-      thisRadii.Add(3f);
+      thisRadii.Add(currentNode.parent.radius);
     }
 
     thisBranch.Add(currentNode.position);
+    thisRadii.Add(currentNode.radius);
 
     while(currentNode != null && currentNode.children.Count > 0) {
       if(currentNode.children.Count == 1) {
         thisBranch.Add(currentNode.children[0].position);
-
-        if(currentNode.parent != null) {
-          thisRadii.Add(currentNode.parent.radius * .98f);
-        } else {
-          thisRadii.Add(3f);
-        }
+        thisRadii.Add(currentNode.children[0].radius);
 
         currentNode = currentNode.children[0];
       } else {
@@ -377,25 +370,5 @@ public class GrowthManager : MonoBehaviour {
 
     _branches.Add(thisBranch);
     _radii.Add(thisRadii);
-  }
-
-  public static Texture2D CreateTileTexture( int sqrTileCount ) {
-    Texture2D texture = new Texture2D( 256, 256 );
-    Color32[] px = new Color32[ texture.width * texture.height ];
-    int p = 0;
-    for( int y=0; y<texture.height; y++ ){
-      float yNorm = y / (float) texture.height;
-      for( int x=0; x<texture.width; x++ ){
-        float xNorm = x / (float) texture.width;
-        bool isWhite = (int) (yNorm*sqrTileCount) % 2 == 0;
-        if( (int) (xNorm*sqrTileCount) % 2 == 0 ) isWhite = !isWhite;
-        px[p++] = isWhite ? new Color32(255,255,255,255) : new Color32(0,0,0,255);
-      }
-    }
-    texture.SetPixels32(px);
-    texture.wrapMode = TextureWrapMode.Clamp;
-    texture.Apply();
-    texture.hideFlags = HideFlags.HideAndDontSave;
-    return texture;
   }
 }
