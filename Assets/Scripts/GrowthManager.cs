@@ -82,8 +82,8 @@ public class GrowthManager : MonoBehaviour {
 
       // Single root vein
       Node rootNode = new Node(
-        new Vector3((15*60)/2, (5*60)/2, (5*60)/2),
-        // Vector3.zero,
+        // new Vector3((15*60)/2, (5*60)/2, (5*60)/2),
+        Vector3.zero,
         null,
         true,
         5f
@@ -348,10 +348,6 @@ public class GrowthManager : MonoBehaviour {
     Profiler.EndSample();
 
     return averageDirection;
-  }
-
-  private Vector3 GetNodePositions(Node node) {
-    return node.position;
   }
 
   private void GetBranch(Node startingNode) {
