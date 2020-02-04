@@ -39,8 +39,7 @@ public class GrowthManager : MonoBehaviour {
     gameObject.AddComponent<MeshRenderer>();
     filter = gameObject.AddComponent<MeshFilter>();
     filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-    GetComponent<Renderer>().material = new Material(Shader.Find("Diffuse"));
-    // GetComponent<Renderer>().material = Resources.Load("Bark_20", typeof(Material)) as Material;
+    GetComponent<Renderer>().material = Resources.Load<Material>("Bark_05");
 
     // Set up the tube renderer
     tube = new GameObject().AddComponent<TubeRenderer>();
