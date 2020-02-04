@@ -290,6 +290,42 @@ public class GrowthManager : MonoBehaviour {
       Profiler.EndSample();
     }
 
+      private void GetBranch(Node startingNode) {
+        Profiler.BeginSample("GetBranch");
+
+        List<Vector3> thisBranch = new List<Vector3>();
+        List<float> thisRadii = new List<float>();
+        Node currentNode = startingNode;
+
+        if(currentNode.parent != null) {
+          thisBranch.Add(currentNode.parent.position);
+          thisRadii.Add(currentNode.parent.radius);
+        }
+
+        thisBranch.Add(currentNode.position);
+        thisRadii.Add(currentNode.radius);
+
+        while(currentNode != null && currentNode.children.Count > 0) {
+          if(currentNode.children.Count == 1) {
+            thisBranch.Add(currentNode.children[0].position);
+            thisRadii.Add(currentNode.children[0].radius);
+
+            currentNode = currentNode.children[0];
+          } else {
+            foreach(Node childNode in currentNode.children) {
+              GetBranch(childNode);
+            }
+
+            currentNode = null;
+          }
+        }
+
+        _branches.Add(thisBranch);
+        _radii.Add(thisRadii);
+
+        Profiler.EndSample();
+      }
+
   void OnDrawGizmos() {
     Profiler.BeginSample("OnDrawGizmos");
 
@@ -348,41 +384,5 @@ public class GrowthManager : MonoBehaviour {
     Profiler.EndSample();
 
     return averageDirection;
-  }
-
-  private void GetBranch(Node startingNode) {
-    Profiler.BeginSample("GetBranch");
-
-    List<Vector3> thisBranch = new List<Vector3>();
-    List<float> thisRadii = new List<float>();
-    Node currentNode = startingNode;
-
-    if(currentNode.parent != null) {
-      thisBranch.Add(currentNode.parent.position);
-      thisRadii.Add(currentNode.parent.radius);
-    }
-
-    thisBranch.Add(currentNode.position);
-    thisRadii.Add(currentNode.radius);
-
-    while(currentNode != null && currentNode.children.Count > 0) {
-      if(currentNode.children.Count == 1) {
-        thisBranch.Add(currentNode.children[0].position);
-        thisRadii.Add(currentNode.children[0].radius);
-
-        currentNode = currentNode.children[0];
-      } else {
-        foreach(Node childNode in currentNode.children) {
-          GetBranch(childNode);
-        }
-
-        currentNode = null;
-      }
-    }
-
-    _branches.Add(thisBranch);
-    _radii.Add(thisRadii);
-
-    Profiler.EndSample();
   }
 }
