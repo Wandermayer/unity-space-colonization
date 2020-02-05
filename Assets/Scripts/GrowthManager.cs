@@ -5,10 +5,15 @@ using UnityEngine.Profiling;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
-  float AttractionDistance = 120f;
-  float KillDistance = 10f;
-  float SegmentLength = 10;
-  float RadiusIncrement = .01f;
+  public float AttractionDistance = 120f;
+  public float KillDistance = 10f;
+  public float SegmentLength = 10;
+
+  public float MinimumRadius = 1f;
+  public float MaximumRadius = 9f;
+  public float RadiusIncrement = .05f;
+
+  public GameObject AttractorsContainer;
 
   float timeToRun = 3f;
   float meshingInterval = .5f;
@@ -39,7 +44,7 @@ public class GrowthManager : MonoBehaviour {
     gameObject.AddComponent<MeshRenderer>();
     filter = gameObject.AddComponent<MeshFilter>();
     filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-    GetComponent<Renderer>().material = Resources.Load<Material>("Bark_05");
+    GetComponent<Renderer>().material = Resources.Load<Material>("Bark_18");
 
     // Set up the tube renderer
     tube = new GameObject().AddComponent<TubeRenderer>();
@@ -60,10 +65,10 @@ public class GrowthManager : MonoBehaviour {
       // }
 
       // Points in a 3D grid
-      int spacing = 100;
-      int rowResolution = 10;
-      int colResolution = 30;
-      int depthResolution = 15;
+      int spacing = 70;
+      int rowResolution = 8;
+      int colResolution = 15;
+      int depthResolution = 8;
 
       for(int row = 0; row < rowResolution; row++) {
         for(int col = 0; col < colResolution; col++) {
@@ -88,11 +93,11 @@ public class GrowthManager : MonoBehaviour {
       // Single root vein
       _rootNodes.Add(
         new Node(
-          // new Vector3((15*60)/2, (5*60)/2, (5*60)/2),
+          // new Vector3((15*70)/2, (8*70)/2, (8*70)/2),
           Vector3.zero,
           null,
           true,
-          5f
+          4f
         )
       );
 
@@ -204,6 +209,18 @@ public class GrowthManager : MonoBehaviour {
           // Add a random jitter to reduce split sources
           newNodePosition += new Vector3(Random.Range(-1,1), Random.Range(-1,1), Random.Range(-1,1));
 
+          /**
+            TODO: bounds
+          */
+          bool isInsideAnyBounds = false;
+
+          // Cast a ray from node.position in averageDirection, check for number of intersections with bounds Mesh
+
+          /**
+            TODO: obstacles
+          */
+          bool isInsideAnyObstacles = false;
+
           // Since this vein node is spawning a new one, it is no longer a tip
           node.isTip = false;
 
@@ -212,7 +229,7 @@ public class GrowthManager : MonoBehaviour {
             newNodePosition,
             node,
             true,
-            node.radius * .98f
+            MinimumRadius
           );
 
           node.children.Add(newNode);
@@ -252,10 +269,15 @@ public class GrowthManager : MonoBehaviour {
         _nodes.Add(currentNode);
 
         // Thicken the radius of every parent Node
+        Profiler.BeginSample("Canalization");
         while(currentNode.parent != null) {
-          currentNode.parent.radius += RadiusIncrement;
+          if(currentNode.parent.radius < MaximumRadius) {
+            currentNode.parent.radius += RadiusIncrement;
+          }
+
           currentNode = currentNode.parent;
         }
+        Profiler.EndSample();
       }
 
       Profiler.EndSample();
@@ -301,8 +323,7 @@ public class GrowthManager : MonoBehaviour {
 
         for(int j=0; j<branch.Count; j++) {
           tube.points[j] = branch[j];
-          // tube.radiuses[j] = _radii[t][j];
-          tube.radiuses[j] = 4f;
+          tube.radiuses[j] = _radii[t][j];
         }
 
         tube.ForceUpdate();
