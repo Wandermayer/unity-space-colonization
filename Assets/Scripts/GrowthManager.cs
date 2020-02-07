@@ -12,13 +12,16 @@ public class GrowthManager : MonoBehaviour {
   public float MinimumRadius = 1f;
   public float MaximumRadius = 9f;
   public float RadiusIncrement = .05f;
+  public bool canalizationEnabled;
 
   public GameObject AttractorsContainer;
+  public GameObject Bounds;
+  public GameObject Obstacles;
 
-  float timeToRun = 3f;
-  float meshingInterval = .5f;
-  float lastMeshTime = 0;
-  bool meshCompiled = false;
+  private List<GameObject> _obstacles;
+  private List<GameObject> _attractorObjects;
+
+  private RaycastHit[] hits;
 
   bool isPaused = true;
 
@@ -49,42 +52,47 @@ public class GrowthManager : MonoBehaviour {
     // Set up the tube renderer
     tube = new GameObject().AddComponent<TubeRenderer>();
 
+    // Get GameObjects provided through Inspector interface
+    // _attractorObjects = GetAllChildren(AttractorsContainer);
+    _obstacles = GetAllChildren(Obstacles);
+
     CreateAttractors();
     CreateRootVeins();
 
     BuildSpatialIndex();
 
+    canalizationEnabled = true;
   }
 
     void CreateAttractors() {
       _attractors.Clear();
 
       // Points in a sphere
-      // for (int i = 0; i < 1000; i++) {
-      //   _attractors.Add(new Attractor(Random.insideUnitSphere * 300));
-      // }
+      for (int i = 0; i < 1500; i++) {
+        _attractors.Add(new Attractor(Random.insideUnitSphere * 300));
+      }
 
       // Points in a 3D grid
-      int spacing = 70;
-      int rowResolution = 8;
-      int colResolution = 15;
-      int depthResolution = 8;
+      // int spacing = 70;
+      // int rowResolution = 8;
+      // int colResolution = 15;
+      // int depthResolution = 8;
 
-      for(int row = 0; row < rowResolution; row++) {
-        for(int col = 0; col < colResolution; col++) {
-          for(int depth = 0; depth < depthResolution; depth++) {
-            _attractors.Add(
-              new Attractor(
-                new Vector3(
-                  col * spacing + Random.Range(-spacing/2, spacing/2),
-                  row * spacing + Random.Range(-spacing/2, spacing/2),
-                  depth * spacing + Random.Range(-spacing/2, spacing/2)
-                )
-              )
-            );
-          }
-        }
-      }
+      // for(int row = 0; row < rowResolution; row++) {
+      //   for(int col = 0; col < colResolution; col++) {
+      //     for(int depth = 0; depth < depthResolution; depth++) {
+      //       _attractors.Add(
+      //         new Attractor(
+      //           new Vector3(
+      //             col * spacing + Random.Range(-spacing/2, spacing/2),
+      //             row * spacing + Random.Range(-spacing/2, spacing/2),
+      //             depth * spacing + Random.Range(-spacing/2, spacing/2)
+      //           )
+      //         )
+      //       );
+      //     }
+      //   }
+      // }
     }
 
     void CreateRootVeins() {
@@ -118,45 +126,28 @@ public class GrowthManager : MonoBehaviour {
     }
 
   void Update() {
-    if(Input.GetKeyUp("space")) {
-      isPaused = !isPaused;
+    if(Input.GetKeyUp("space")) { isPaused = !isPaused; }
+    if(isPaused) { return; }
+
+    // Reset lists of attractors that vein nodes were attracted to last cycle
+    foreach(Node node in _nodes) {
+      node.influencedBy.Clear();
     }
 
-    if(isPaused) {
-      return;
-    }
+    // 1. Associate attractors with vein nodes =============================================================================
+    AssociateAttractors();
 
-    // if(Time.time < timeToRun) {
-      // Reset lists of attractors that vein nodes were attracted to last cycle
-      foreach(Node node in _nodes) {
-        node.influencedBy.Clear();
-      }
+    // 2. Add vein nodes onto every vein node that is being influenced ====================================================
+    GrowNetwork();
 
-      // 1. Associate attractors with vein nodes ===========================================================================
-      AssociateAttractors();
+    // 3. Remove attractors that have been reached by their vein nodes =====================================================
+    PruneAttractors();
 
-      // 2. Add vein nodes onto every vein node that is being influenced. =================================================
-      GrowNetwork();
+    // 4. Rebuild vein node spatial index with latest vein nodes ===========================================================
+    BuildSpatialIndex();
 
-      // 3. Remove attractors that have been reached by their vein nodes ==================================================
-      PruneAttractors();
-
-      // 5. Rebuild vein node spatial index with latest vein nodes =========================================================
-      BuildSpatialIndex();
-
-
-    // 6. Generate tube meshes to render the vein network ==================================================================
-
-    // } else {
-      // if(!meshCompiled) {
-      // if(Time.time >= lastMeshTime + meshingInterval) {
-        // Generate tube mesh recursively - smoother, but slower. Much better texturing!
-        GenerateBranchMeshes();
-
-        // meshCompiled = true;
-        // lastMeshTime = Time.time;
-      // }
-    // }
+    // 5. Generate tube meshes to render the vein network ==================================================================
+    GenerateBranchMeshes();
   }
 
     void AssociateAttractors() {
@@ -209,56 +200,55 @@ public class GrowthManager : MonoBehaviour {
           // Add a random jitter to reduce split sources
           newNodePosition += new Vector3(Random.Range(-1,1), Random.Range(-1,1), Random.Range(-1,1));
 
-          /**
-            TODO: bounds
-          */
-          bool isInsideAnyBounds = false;
+          // Bounds check --------------------------------------------------------------------------------------------------
+          bool isInsideBounds = false;
 
-          // Cast a ray from node.position in averageDirection, check for number of intersections with bounds Mesh
-
-          /**
-            TODO: obstacles
-          */
-          bool isInsideAnyObstacles = false;
-
-          // Since this vein node is spawning a new one, it is no longer a tip
-          node.isTip = false;
-
-          // Create the new node
-          Node newNode = new Node(
-            newNodePosition,
-            node,
-            true,
-            MinimumRadius
+          // Cast a ray from the new node's position to the center of the bounds mesh
+          hits = Physics.RaycastAll(
+            newNodePosition,  // starting point
+            (Bounds.transform.position - newNodePosition).normalized,  // direction
+            (int)Mathf.Round(Vector3.Distance(newNodePosition, Bounds.transform.position)), // maximum distance
+            LayerMask.GetMask("Bounds") // layer containing colliders
           );
 
-          node.children.Add(newNode);
-          _nodesToAdd.Add(newNode);
+          // 0 = point is inside the bounds
+          if(hits.Length == 0) {
+            isInsideBounds = true;
+          }
 
-          /**
-            Add a new discrete tube to the CombeInstance array. This method blows because "connected" tubes aren't actually connected, causing gaps at joints and texture tiling problems.
-          */
+          // Obstacles check -----------------------------------------------------------------------------------------------
+          bool isInsideAnyObstacles = false;
 
-          /*
-          // Create a new tube mesh for this segment.
-          CombineInstance combineInstance = new CombineInstance();
-          tube.points = new Vector3[2];
-          tube.radiuses = new float[2];
+          foreach(GameObject obstacle in _obstacles) {
+            // Cast a ray rom the new node's position to the center of this obstacle mesh
+            hits = Physics.RaycastAll(
+              newNodePosition,
+              (obstacle.transform.position - newNodePosition).normalized,
+              (int)Mathf.Round(Vector3.Distance(newNodePosition, obstacle.transform.position)),
+              LayerMask.GetMask("Obstacles")
+            );
 
-          // tube.points[0] = node.parent != null ? node.parent.position : new Vector3(0,0,0); // go back two nodes for smoother radius transitions and prevent joint gaps
-          tube.points[0] = node.position;
-          tube.points[1] = newNode.position;
-          // tube.radiuses[0] = node.parent != null ? node.parent.radius : 5f;
-          tube.radiuses[0] = node.radius;
-          tube.radiuses[1] = newNode.radius;
+            // 0 = point is inside the obstacle, even numbers mean the ray fully passed through one or more obstacles (entered and exited), odd means ray has entered one but not exited
+            if(hits.Length == 0 || hits.Length % 2 != 0) {
+              isInsideAnyObstacles = true;
+            }
+          }
 
-          tube.ForceUpdate();
+          if(isInsideBounds && !isInsideAnyObstacles) {
+            // Since this vein node is spawning a new one, it is no longer a tip
+            node.isTip = false;
 
-          combineInstance.mesh = Instantiate(tube.mesh);
-          combineInstance.transform = tube.transform.localToWorldMatrix;
+            // Create the new node
+            Node newNode = new Node(
+              newNodePosition,
+              node,
+              true,
+              MinimumRadius
+            );
 
-          _branchMeshes.Add(combineInstance);
-          */
+            node.children.Add(newNode);
+            _nodesToAdd.Add(newNode);
+          }
         }
       }
 
@@ -269,15 +259,19 @@ public class GrowthManager : MonoBehaviour {
         _nodes.Add(currentNode);
 
         // Thicken the radius of every parent Node
-        Profiler.BeginSample("Canalization");
-        while(currentNode.parent != null) {
-          if(currentNode.parent.radius < MaximumRadius) {
-            currentNode.parent.radius += RadiusIncrement;
+        if(canalizationEnabled) {
+          Profiler.BeginSample("Canalization");
+
+          while(currentNode.parent != null) {
+            if(currentNode.parent.radius < MaximumRadius) {
+              currentNode.parent.radius += RadiusIncrement;
+            }
+
+            currentNode = currentNode.parent;
           }
 
-          currentNode = currentNode.parent;
+          Profiler.EndSample();
         }
-        Profiler.EndSample();
       }
 
       Profiler.EndSample();
@@ -397,6 +391,8 @@ public class GrowthManager : MonoBehaviour {
       }
     }
 
+    // TODO: draw bounding box
+
     Profiler.EndSample();
   }
 
@@ -433,5 +429,15 @@ public class GrowthManager : MonoBehaviour {
     Profiler.EndSample();
 
     return averageDirection;
+  }
+
+  private List<GameObject> GetAllChildren(GameObject parentObject) {
+    List<GameObject> children = new List<GameObject>();
+
+    for(int i=0; i<parentObject.transform.childCount; i++) {
+      children.Add(parentObject.transform.GetChild(i).gameObject);
+    }
+
+    return children;
   }
 }

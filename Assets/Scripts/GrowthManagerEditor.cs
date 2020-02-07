@@ -4,26 +4,19 @@ using UnityEditor;
 
 [CustomEditor(typeof(GrowthManager))]
 public class GrowthManagerEditor : Editor {
-  // private SerializedProperty AttractionDistance;
-  // private SerializedProperty KillDistance;
-  // private SerializedProperty SegmentLength;
-  // private SerializedProperty attractorContainer;
-
-  private void OnEnable() {
-    // AttractionDistance = serializedObject.FindProperty("AttractionDistance");
-    // KillDistance = serializedObject.FindProperty("KillDistance");
-    // SegmentLength = serializedObject.FindProperty("SegmentLength");
-    // attractorContainer = serializedObject.FindProperty("attractorContainer");
-  }
-
   public override void OnInspectorGUI() {
-    serializedObject.UpdateIfDirtyOrScript();
+    GrowthManager manager = (GrowthManager)target;
 
-    // AttractionDistance = EditorGUILayout.Slider("Attraction distance", 50f, 1f, 100f);
-    // KillDistance = EditorGUILayout.Slider("Kill distance", 50f, 1f, 100f);
-    // SegmentLength = EditorGUILayout.Slider("Segment length", 50f, 1f, 100f);
-    // attractorContainer = EditorGUILayout.ObjectField(attractorContainer, "Attractor container");
+    manager.AttractorsContainer = (GameObject)EditorGUILayout.ObjectField("Attractors container", manager.AttractorsContainer, typeof(GameObject), true);
+    manager.Bounds = (GameObject)EditorGUILayout.ObjectField("Bounds object", manager.Bounds, typeof(GameObject), true);
+    manager.Obstacles = (GameObject)EditorGUILayout.ObjectField("Obstacles container", manager.Obstacles, typeof(GameObject), true);
 
-    serializedObject.ApplyModifiedProperties();
+    if(GUILayout.Button("Generate attractors")) {
+      Debug.Log("test");
+    }
+
+    manager.AttractionDistance = EditorGUILayout.Slider("Attraction distance", manager.AttractionDistance, 10f, 200f);
+    manager.KillDistance = EditorGUILayout.Slider("Kill distance", manager.KillDistance, 1f, 50f);
+    manager.SegmentLength = EditorGUILayout.Slider("Segment length", manager.SegmentLength, 1f, 100f);
   }
 }
