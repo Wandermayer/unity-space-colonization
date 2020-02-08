@@ -228,8 +228,8 @@ public class GrowthManager : MonoBehaviour {
               LayerMask.GetMask("Obstacles")
             );
 
-            // 0 = point is inside the obstacle, even numbers mean the ray fully passed through one or more obstacles (entered and exited), odd means ray has entered one but not exited
-            if(hits.Length == 0 || hits.Length % 2 != 0) {
+            // 0 = point is inside the obstacle
+            if(hits.Length == 0) {
               isInsideAnyObstacles = true;
             }
           }
@@ -263,7 +263,7 @@ public class GrowthManager : MonoBehaviour {
           Profiler.BeginSample("Canalization");
 
           while(currentNode.parent != null) {
-            if(currentNode.parent.radius < MaximumRadius) {
+            if(currentNode.parent.radius + RadiusIncrement <= MaximumRadius) {
               currentNode.parent.radius += RadiusIncrement;
             }
 
