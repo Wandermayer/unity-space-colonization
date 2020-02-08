@@ -40,17 +40,19 @@ public class GrowthManager : MonoBehaviour {
   private KDTree _nodeTree;               // spatial index of vein nodes
   private KDQuery query = new KDQuery();  // query object for spatial indices
 
+  private GameObject veinsObject;
   private MeshFilter filter;
 
   void Start() {
     // Set up a mesh filter on this GameObject
-    gameObject.AddComponent<MeshRenderer>();
-    filter = gameObject.AddComponent<MeshFilter>();
+    veinsObject = new GameObject("Veins");
+    veinsObject.AddComponent<MeshRenderer>();
+    filter = veinsObject.AddComponent<MeshFilter>();
     filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-    GetComponent<Renderer>().material = Resources.Load<Material>("Bark_18");
+    veinsObject.GetComponent<Renderer>().material = Resources.Load<Material>("Bark_18");
 
     // Set up the tube renderer
-    tube = new GameObject().AddComponent<TubeRenderer>();
+    tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
 
     // Get GameObjects provided through Inspector interface
     // _attractorObjects = GetAllChildren(AttractorsContainer);
