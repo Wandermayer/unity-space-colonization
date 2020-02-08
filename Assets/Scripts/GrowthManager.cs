@@ -205,16 +205,20 @@ public class GrowthManager : MonoBehaviour {
           // Bounds check --------------------------------------------------------------------------------------------------
           bool isInsideBounds = false;
 
-          // Cast a ray from the new node's position to the center of the bounds mesh
-          hits = Physics.RaycastAll(
-            newNodePosition,  // starting point
-            (Bounds.transform.position - newNodePosition).normalized,  // direction
-            (int)Mathf.Round(Vector3.Distance(newNodePosition, Bounds.transform.position)), // maximum distance
-            LayerMask.GetMask("Bounds") // layer containing colliders
-          );
+          if(Bounds != null) {
+            // Cast a ray from the new node's position to the center of the bounds mesh
+            hits = Physics.RaycastAll(
+              newNodePosition,  // starting point
+              (Bounds.transform.position - newNodePosition).normalized,  // direction
+              (int)Mathf.Round(Vector3.Distance(newNodePosition, Bounds.transform.position)), // maximum distance
+              LayerMask.GetMask("Bounds") // layer containing colliders
+            );
 
-          // 0 = point is inside the bounds
-          if(hits.Length == 0) {
+            // 0 = point is inside the bounds
+            if(hits.Length == 0) {
+              isInsideBounds = true;
+            }
+          } else {
             isInsideBounds = true;
           }
 
@@ -227,7 +231,7 @@ public class GrowthManager : MonoBehaviour {
               hits = Physics.RaycastAll(
                 newNodePosition,
                 (obstacle.transform.position - newNodePosition).normalized,
-                (int)Mathf.Round(Vector3.Distance(newNodePosition, obstacle.transform.position)),
+                (int)Mathf.Ceil(Vector3.Distance(newNodePosition, obstacle.transform.position)),
                 LayerMask.GetMask("Obstacles")
               );
 
