@@ -5,13 +5,13 @@ using UnityEngine.Profiling;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
-  public float AttractionDistance = 120f;
-  public float KillDistance = 10f;
-  public float SegmentLength = 10;
+  public float AttractionDistance;
+  public float KillDistance;
+  public float SegmentLength;
 
-  public float MinimumRadius = 1f;
-  public float MaximumRadius = 9f;
-  public float RadiusIncrement = .05f;
+  public float MinimumRadius;
+  public float MaximumRadius;
+  public float RadiusIncrement;
   public bool canalizationEnabled;
 
   public GameObject AttractorsContainer;
@@ -44,6 +44,16 @@ public class GrowthManager : MonoBehaviour {
   private MeshFilter filter;
 
   void Start() {
+    AttractionDistance = 1f;
+    KillDistance = .1f;
+    SegmentLength = .01f;
+
+    MinimumRadius = .001f;
+    MaximumRadius = .02f;
+    RadiusIncrement = .0001f;
+
+    canalizationEnabled = true;
+
     // Set up a mesh filter on this GameObject
     veinsObject = new GameObject("Veins");
     veinsObject.AddComponent<MeshRenderer>();
@@ -62,8 +72,6 @@ public class GrowthManager : MonoBehaviour {
     CreateRootVeins();
 
     BuildSpatialIndex();
-
-    canalizationEnabled = true;
   }
 
     void CreateAttractors() {
@@ -71,7 +79,7 @@ public class GrowthManager : MonoBehaviour {
 
       // Points in a sphere
       for (int i = 0; i < 1500; i++) {
-        _attractors.Add(new Attractor(Random.insideUnitSphere * 300));
+        _attractors.Add(new Attractor(Random.insideUnitSphere * .5f));
       }
 
       // Points in a 3D grid
@@ -107,7 +115,7 @@ public class GrowthManager : MonoBehaviour {
           Vector3.zero,
           null,
           true,
-          4f
+          MinimumRadius
         )
       );
 
@@ -200,7 +208,7 @@ public class GrowthManager : MonoBehaviour {
           Vector3 newNodePosition = node.position + averageDirection * SegmentLength;
 
           // Add a random jitter to reduce split sources
-          newNodePosition += new Vector3(Random.Range(-1,1), Random.Range(-1,1), Random.Range(-1,1));
+          // newNodePosition += new Vector3(Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f));
 
           // Bounds check --------------------------------------------------------------------------------------------------
           bool isInsideBounds = false;
@@ -384,7 +392,7 @@ public class GrowthManager : MonoBehaviour {
       // Draw a spheres for all attractors
       Gizmos.color = Color.yellow;
       foreach(Attractor attractor in _attractors) {
-        Gizmos.DrawSphere(attractor.position, 1);
+        Gizmos.DrawSphere(attractor.position, .005f);
       }
 
       // Draw lines to connect each vein node
