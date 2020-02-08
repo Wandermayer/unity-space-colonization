@@ -222,17 +222,19 @@ public class GrowthManager : MonoBehaviour {
           bool isInsideAnyObstacles = false;
 
           foreach(GameObject obstacle in _obstacles) {
-            // Cast a ray rom the new node's position to the center of this obstacle mesh
-            hits = Physics.RaycastAll(
-              newNodePosition,
-              (obstacle.transform.position - newNodePosition).normalized,
-              (int)Mathf.Round(Vector3.Distance(newNodePosition, obstacle.transform.position)),
-              LayerMask.GetMask("Obstacles")
-            );
+            if(obstacle.activeInHierarchy) {
+              // Cast a ray rom the new node's position to the center of this obstacle mesh
+              hits = Physics.RaycastAll(
+                newNodePosition,
+                (obstacle.transform.position - newNodePosition).normalized,
+                (int)Mathf.Round(Vector3.Distance(newNodePosition, obstacle.transform.position)),
+                LayerMask.GetMask("Obstacles")
+              );
 
-            // 0 = point is inside the obstacle
-            if(hits.Length == 0) {
-              isInsideAnyObstacles = true;
+              // 0 = point is inside the obstacle
+              if(hits.Length == 0) {
+                isInsideAnyObstacles = true;
+              }
             }
           }
 
