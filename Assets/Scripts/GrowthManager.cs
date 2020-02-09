@@ -44,13 +44,13 @@ public class GrowthManager : MonoBehaviour {
   private MeshFilter filter;
 
   void Start() {
-    AttractionDistance = 1f;
-    KillDistance = .1f;
-    SegmentLength = .01f;
+    AttractionDistance = .3f;
+    KillDistance = .05f;
+    SegmentLength = .04f;
 
-    MinimumRadius = .001f;
-    MaximumRadius = .02f;
-    RadiusIncrement = .0001f;
+    MinimumRadius = .003f;
+    MaximumRadius = .015f;
+    RadiusIncrement = .00005f;
 
     canalizationEnabled = true;
 
@@ -65,7 +65,7 @@ public class GrowthManager : MonoBehaviour {
     tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
 
     // Get GameObjects provided through Inspector interface
-    // _attractorObjects = GetAllChildren(AttractorsContainer);
+    _attractorObjects = GetAllChildren(GameObject.Find("Attractors"));
     _obstacles = GetAllChildren(Obstacles);
 
     CreateAttractors();
@@ -78,31 +78,41 @@ public class GrowthManager : MonoBehaviour {
       _attractors.Clear();
 
       // Points in a sphere
-      for (int i = 0; i < 1500; i++) {
-        _attractors.Add(new Attractor(Random.insideUnitSphere * .5f));
-      }
+      // for (int i = 0; i < 1000; i++) {
+      //   _attractors.Add(new Attractor(Random.insideUnitSphere * .75f));
+      // }
 
       // Points in a 3D grid
-      // int spacing = 70;
-      // int rowResolution = 8;
-      // int colResolution = 15;
-      // int depthResolution = 8;
+      // int rowResolution = 6;
+      // int colResolution = 12;
+      // int depthResolution = 6;
+      // float jitterAmount = .025f;
 
-      // for(int row = 0; row < rowResolution; row++) {
-      //   for(int col = 0; col < colResolution; col++) {
-      //     for(int depth = 0; depth < depthResolution; depth++) {
+      // for(int row = 0; row <= rowResolution; row++) {
+      //   for(int col = 0; col <= colResolution; col++) {
+      //     for(int depth = 0; depth <= depthResolution; depth++) {
       //       _attractors.Add(
       //         new Attractor(
       //           new Vector3(
-      //             col * spacing + Random.Range(-spacing/2, spacing/2),
-      //             row * spacing + Random.Range(-spacing/2, spacing/2),
-      //             depth * spacing + Random.Range(-spacing/2, spacing/2)
+      //             col * (1f/colResolution) - .5f + Random.Range(-jitterAmount, jitterAmount),
+      //             row * (.5f/rowResolution) - .25f + Random.Range(-jitterAmount, jitterAmount),
+      //             depth * (.5f/depthResolution) - .25f + Random.Range(-jitterAmount, jitterAmount)
       //           )
       //         )
       //       );
       //     }
       //   }
       // }
+
+      // Create Attractors from GameObjects created by AttractorGenerator script
+      foreach(GameObject attractorObject in _attractorObjects) {
+        _attractors.Add(new Attractor(attractorObject.transform.position));
+      }
+
+      // Destroy GameObjects made by script
+      foreach(GameObject attractorObject in _attractorObjects) {
+        Destroy(attractorObject);
+      }
     }
 
     void CreateRootVeins() {
@@ -111,8 +121,16 @@ public class GrowthManager : MonoBehaviour {
       // Single root vein
       _rootNodes.Add(
         new Node(
-          // new Vector3((15*70)/2, (8*70)/2, (8*70)/2),
-          Vector3.zero,
+          new Vector3(-1.33f,0f,0f),
+          null,
+          true,
+          MinimumRadius
+        )
+      );
+
+      _rootNodes.Add(
+        new Node(
+          new Vector3(1.33f,0f,0f),
           null,
           true,
           MinimumRadius
@@ -213,20 +231,16 @@ public class GrowthManager : MonoBehaviour {
           // Bounds check --------------------------------------------------------------------------------------------------
           bool isInsideBounds = false;
 
-          if(Bounds != null) {
-            // Cast a ray from the new node's position to the center of the bounds mesh
-            hits = Physics.RaycastAll(
-              newNodePosition,  // starting point
-              (Bounds.transform.position - newNodePosition).normalized,  // direction
-              (int)Mathf.Round(Vector3.Distance(newNodePosition, Bounds.transform.position)), // maximum distance
-              LayerMask.GetMask("Bounds") // layer containing colliders
-            );
+          // Cast a ray from the new node's position to the center of the bounds mesh
+          hits = Physics.RaycastAll(
+            newNodePosition,  // starting point
+            (Bounds.transform.position - newNodePosition).normalized,  // direction
+            (int)Mathf.Round(Vector3.Distance(newNodePosition, Bounds.transform.position)),  // maximum distance
+            LayerMask.GetMask("Bounds") // layer containing colliders
+          );
 
-            // 0 = point is inside the bounds
-            if(hits.Length == 0) {
-              isInsideBounds = true;
-            }
-          } else {
+          // 0 = point is inside the bounds
+          if(hits.Length == 0) {
             isInsideBounds = true;
           }
 
@@ -235,12 +249,12 @@ public class GrowthManager : MonoBehaviour {
 
           foreach(GameObject obstacle in _obstacles) {
             if(obstacle.activeInHierarchy) {
-              // Cast a ray rom the new node's position to the center of this obstacle mesh
+              // Cast a ray from the new node's position to the center of this obstacle mesh
               hits = Physics.RaycastAll(
-                newNodePosition,
-                (obstacle.transform.position - newNodePosition).normalized,
-                (int)Mathf.Ceil(Vector3.Distance(newNodePosition, obstacle.transform.position)),
-                LayerMask.GetMask("Obstacles")
+                newNodePosition,  // starting point
+                (obstacle.transform.position - newNodePosition).normalized,   // direction
+                (int)Mathf.Ceil(Vector3.Distance(newNodePosition, obstacle.transform.position)),  // maximum distance
+                LayerMask.GetMask("Obstacles")  // layer containing obstacles
               );
 
               // 0 = point is inside the obstacle
