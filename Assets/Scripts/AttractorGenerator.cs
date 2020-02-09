@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class AttractorGenerator : MonoBehaviour {
-  public int NumAttractors;
-
+  public int NumAttractors = 1000;
+  private int hitCount;
 
   void Start() {
-
+    NumAttractors = 8000;
+    hitCount = 0;
+    CreateAttractors();
   }
 
   void Update() {
@@ -19,22 +21,31 @@ public class AttractorGenerator : MonoBehaviour {
 
     for(int i=0; i<NumAttractors; i++) {
       RaycastHit hit;
+      Vector3 startingPoint = Random.onUnitSphere * 2;
+      Vector3 targetPoint = Random.onUnitSphere * .5f;
 
-      /*
       bool bHit = Physics.Raycast(
-        // pick a point outside the mesh
-        // pick a center point inside the mesh
+        startingPoint,
+        targetPoint,
         out hit,
-        // distance
-        LayerMask.GetMask("Target") // layer mask
+        Mathf.Infinity,
+        LayerMask.GetMask("Targets"),
+        QueryTriggerInteraction.Ignore
       );
 
       if(bHit) {
+        hitCount++;
         GameObject attractor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        attractor.transform.SetParent(attractorsContainer);
+        attractor.transform.SetParent(attractorsContainer.transform);
+        attractor.transform.localScale = new Vector3(.01f,.01f,.01f);
         attractor.transform.position = hit.point;
+
+        // Color rayColor;
+        // rayColor = Color.red;
+        // Debug.DrawLine(startingPoint, targetPoint, rayColor, 100f);
       }
-      */
     }
+
+    Debug.Log(hitCount);
   }
 }
