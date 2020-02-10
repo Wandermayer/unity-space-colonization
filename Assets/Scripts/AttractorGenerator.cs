@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class AttractorGenerator : MonoBehaviour {
-  public int NumAttractors = 1000;
+  public int NumAttempts;
   private int hitCount;
 
   void Start() {
-    NumAttractors = 8000;
+    NumAttempts = 25000;
     hitCount = 0;
     CreateAttractors();
   }
@@ -19,7 +19,7 @@ public class AttractorGenerator : MonoBehaviour {
   public void CreateAttractors() {
     GameObject attractorsContainer = new GameObject("Attractors");
 
-    for(int i=0; i<NumAttractors; i++) {
+    for(int i=0; i<NumAttempts; i++) {
       RaycastHit hit;
       Vector3 startingPoint = Random.onUnitSphere * 2;
       Vector3 targetPoint = Random.onUnitSphere * .5f;
@@ -46,6 +46,6 @@ public class AttractorGenerator : MonoBehaviour {
       }
     }
 
-    Debug.Log(hitCount);
+    Debug.Log(hitCount + " hits");
   }
 }
