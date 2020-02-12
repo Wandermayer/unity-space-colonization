@@ -14,18 +14,14 @@ public class GrowthManager : MonoBehaviour {
   public float RadiusIncrement;
   public bool canalizationEnabled;
 
-  public GameObject AttractorsContainer;
-  public GameObject Bounds;
-  public GameObject Obstacles;
-
+  private GameObject _bounds;
   private List<GameObject> _obstacles;
   private List<GameObject> _attractorObjects;
 
   private RaycastHit[] hits;
 
   bool isPaused = true;
-
-  TubeRenderer tube;
+  bool boundsEnabled;
 
   private List<Attractor> _attractors = new List<Attractor>();
   private List<Attractor> _attractorsToRemove = new List<Attractor>();
@@ -40,6 +36,7 @@ public class GrowthManager : MonoBehaviour {
   private KDTree _nodeTree;               // spatial index of vein nodes
   private KDQuery query = new KDQuery();  // query object for spatial indices
 
+  private TubeRenderer tube;
   private GameObject veinsObject;
   private MeshFilter filter;
 
@@ -54,7 +51,7 @@ public class GrowthManager : MonoBehaviour {
 
     canalizationEnabled = true;
 
-    // Set up a mesh filter on this GameObject
+    // Set up a separate GameObject to render the veins to
     veinsObject = new GameObject("Veins");
     veinsObject.AddComponent<MeshRenderer>();
     filter = veinsObject.AddComponent<MeshFilter>();
@@ -64,9 +61,13 @@ public class GrowthManager : MonoBehaviour {
     // Set up the tube renderer
     tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
 
-    // Get GameObjects provided through Inspector interface
+    // Retrieve any active bounds meshes
+    _bounds = GetAllChildren(GameObject.Find("Bounds"))[0];
+    boundsEnabled = _bounds == null ? false : true;
+
+    // Retrieve any externally-generated attractors or obstacles
     _attractorObjects = GetAllChildren(GameObject.Find("Attractors"));
-    _obstacles = GetAllChildren(Obstacles);
+    _obstacles = GetAllChildren(GameObject.Find("Obstacles"));
 
     CreateAttractors();
     CreateRootVeins();
@@ -107,43 +108,63 @@ public class GrowthManager : MonoBehaviour {
       // Create Attractors from GameObjects created by AttractorGenerator script
       foreach(GameObject attractorObject in _attractorObjects) {
         _attractors.Add(new Attractor(attractorObject.transform.position));
-      }
-
-      // Destroy GameObjects made by script
-      foreach(GameObject attractorObject in _attractorObjects) {
         Destroy(attractorObject);
       }
     }
 
     void CreateRootVeins() {
       _nodes.Clear();
+      _rootNodes.Clear();
 
-      // Single root vein
+      // ORIGIN -------------------------------------------------
+      // _rootNodes.Add(
+      //   new Node(
+      //     Vector3.zero,
+      //     null,
+      //     true,
+      //     MinimumRadius
+      //   )
+      // );
+
+      // HEAD ---------------------------------------------------
+      // On surface
       _rootNodes.Add(
         new Node(
-          new Vector3(-1.33f,0f,0f),
+          // new Vector3(0f,.4f,0f), // top of skull
+          new Vector3(-.4f, -1f, -.2f), // cheek
           null,
           true,
           MinimumRadius
         )
       );
 
-      _rootNodes.Add(
-        new Node(
-          new Vector3(1.33f,0f,0f),
-          null,
-          true,
-          MinimumRadius
-        )
-      );
+      // Inside
+      // _rootNodes.Add(
+      //   new Node(
+      //     new Vector3(-1.33f,0f,0f),
+      //     null,
+      //     true,
+      //     MinimumRadius
+      //   )
+      // );
 
+      // _rootNodes.Add(
+      //   new Node(
+      //     new Vector3(1.33f,0f,0f),
+      //     null,
+      //     true,
+      //     MinimumRadius
+      //   )
+      // );
+
+      // SPHERE ----------------------------------------------
       // for(int i=0; i<3; i++) {
       //   _rootNodes.Add(
       //     new Node(
-      //       Random.insideUnitSphere * 100,
+      //       Random.insideUnitSphere,
       //       null,
       //       true,
-      //       5f
+      //       MinimumRadius
       //     )
       //   );
       // }
@@ -229,19 +250,21 @@ public class GrowthManager : MonoBehaviour {
           // newNodePosition += new Vector3(Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f), Random.Range(-.0001f,.0001f));
 
           // Bounds check --------------------------------------------------------------------------------------------------
-          bool isInsideBounds = false;
+          bool isInsideBounds = boundsEnabled ? false : true;
 
-          // Cast a ray from the new node's position to the center of the bounds mesh
-          hits = Physics.RaycastAll(
-            newNodePosition,  // starting point
-            (Bounds.transform.position - newNodePosition).normalized,  // direction
-            (int)Mathf.Round(Vector3.Distance(newNodePosition, Bounds.transform.position)),  // maximum distance
-            LayerMask.GetMask("Bounds") // layer containing colliders
-          );
+          if(boundsEnabled) {
+            // Cast a ray from the new node's position to the center of the bounds mesh
+            hits = Physics.RaycastAll(
+              newNodePosition,  // starting point
+              (_bounds.transform.position - newNodePosition).normalized,  // direction
+              (int)Mathf.Round(Vector3.Distance(newNodePosition, _bounds.transform.position)),  // maximum distance
+              LayerMask.GetMask("Bounds") // layer containing colliders
+            );
 
-          // 0 = point is inside the bounds
-          if(hits.Length == 0) {
-            isInsideBounds = true;
+            // 0 = point is inside the bounds
+            if(hits.Length == 0) {
+              isInsideBounds = true;
+            }
           }
 
           // Obstacles check -----------------------------------------------------------------------------------------------
@@ -420,8 +443,6 @@ public class GrowthManager : MonoBehaviour {
         // Gizmos.DrawSphere(node.position, 1);
       }
     }
-
-    // TODO: draw bounding box
 
     Profiler.EndSample();
   }
