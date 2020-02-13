@@ -5,6 +5,8 @@ using UnityEngine.Profiling;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
+  public Transform InputRootNode;
+
   public float AttractionDistance;
   public float KillDistance;
   public float SegmentLength;
@@ -116,34 +118,46 @@ public class GrowthManager : MonoBehaviour {
       _nodes.Clear();
       _rootNodes.Clear();
 
-      // RANDOM POINT ON MESH -----------------------------------
-      bool isHit = false;
-      RaycastHit hitInfo;
-
-      do {
-        Vector3 startingPoint = Random.onUnitSphere * 2;
-        Vector3 targetPoint = Random.onUnitSphere * .5f;
-
-        isHit = Physics.Raycast(
-          startingPoint,
-          targetPoint,
-          out hitInfo,
-          Mathf.Infinity,
-          LayerMask.GetMask("Targets"),
-          QueryTriggerInteraction.Ignore
+      // ROOT NODE FROM PROVIDED TRANSFORM ----------------------
+      if(InputRootNode != null) {
+        _rootNodes.Add(
+          new Node(
+            InputRootNode.position,
+            null,
+            true,
+            MinimumRadius
+          )
         );
+      }
 
-        if(isHit) {
-          _rootNodes.Add(
-            new Node(
-              hitInfo.point,
-              null,
-              true,
-              MinimumRadius
-            )
-          );
-        }
-      } while(!isHit);
+      // RANDOM POINT ON MESH -----------------------------------
+      // bool isHit = false;
+      // RaycastHit hitInfo;
+
+      // do {
+      //   Vector3 startingPoint = Random.onUnitSphere * 2;
+      //   Vector3 targetPoint = Random.onUnitSphere * .5f;
+
+      //   isHit = Physics.Raycast(
+      //     startingPoint,
+      //     targetPoint,
+      //     out hitInfo,
+      //     Mathf.Infinity,
+      //     LayerMask.GetMask("Targets"),
+      //     QueryTriggerInteraction.Ignore
+      //   );
+
+      //   if(isHit) {
+      //     _rootNodes.Add(
+      //       new Node(
+      //         hitInfo.point,
+      //         null,
+      //         true,
+      //         MinimumRadius
+      //       )
+      //     );
+      //   }
+      // } while(!isHit);
 
       // ORIGIN -------------------------------------------------
       // _rootNodes.Add(
