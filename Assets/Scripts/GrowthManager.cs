@@ -116,6 +116,35 @@ public class GrowthManager : MonoBehaviour {
       _nodes.Clear();
       _rootNodes.Clear();
 
+      // RANDOM POINT ON MESH -----------------------------------
+      bool isHit = false;
+      RaycastHit hitInfo;
+
+      do {
+        Vector3 startingPoint = Random.onUnitSphere * 2;
+        Vector3 targetPoint = Random.onUnitSphere * .5f;
+
+        isHit = Physics.Raycast(
+          startingPoint,
+          targetPoint,
+          out hitInfo,
+          Mathf.Infinity,
+          LayerMask.GetMask("Targets"),
+          QueryTriggerInteraction.Ignore
+        );
+
+        if(isHit) {
+          _rootNodes.Add(
+            new Node(
+              hitInfo.point,
+              null,
+              true,
+              MinimumRadius
+            )
+          );
+        }
+      } while(!isHit);
+
       // ORIGIN -------------------------------------------------
       // _rootNodes.Add(
       //   new Node(
@@ -126,17 +155,27 @@ public class GrowthManager : MonoBehaviour {
       //   )
       // );
 
+      // ROCKS --------------------------------------------------
+      // _rootNodes.Add(
+      //   new Node(
+      //     new Vector3(.7f,0f,0f),
+      //     null,
+      //     true,
+      //     MinimumRadius
+      //   )
+      // );
+
       // HEAD ---------------------------------------------------
       // On surface
-      _rootNodes.Add(
-        new Node(
-          // new Vector3(0f,.4f,0f), // top of skull
-          new Vector3(-.4f, -1f, -.2f), // cheek
-          null,
-          true,
-          MinimumRadius
-        )
-      );
+      // _rootNodes.Add(
+      //   new Node(
+      //     // new Vector3(0f,.4f,0f), // top of skull
+      //     new Vector3(-.4f, -1f, -.2f), // cheek
+      //     null,
+      //     true,
+      //     MinimumRadius
+      //   )
+      // );
 
       // Inside
       // _rootNodes.Add(
