@@ -42,6 +42,6 @@ public class AttractorGenerator : MonoBehaviour {
       }
     }
 
-    Debug.Log(hitCount + " hits");
+    // Debug.Log(hitCount + " hits");
   }
 }
