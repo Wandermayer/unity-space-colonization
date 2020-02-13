@@ -7,13 +7,9 @@ public class AttractorGenerator : MonoBehaviour {
   private int hitCount;
 
   void Start() {
-    NumAttempts = 25000;
+    NumAttempts = 100000;
     hitCount = 0;
     CreateAttractors();
-  }
-
-  void Update() {
-
   }
 
   public void CreateAttractors() {
@@ -38,7 +34,7 @@ public class AttractorGenerator : MonoBehaviour {
         GameObject attractor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         attractor.transform.SetParent(attractorsContainer.transform);
         attractor.transform.localScale = new Vector3(.01f,.01f,.01f);
-        attractor.transform.position = hit.point;
+        attractor.transform.position = hit.point + (hit.normal * .015f);
 
         // Color rayColor;
         // rayColor = Color.red;
