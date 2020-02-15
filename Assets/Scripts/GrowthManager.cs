@@ -25,19 +25,30 @@ public class GrowthManager : MonoBehaviour {
   bool isPaused = true;
   bool boundsEnabled;
 
+  // Attractors
   private List<Attractor> _attractors = new List<Attractor>();
   private List<Attractor> _attractorsToRemove = new List<Attractor>();
+
+  // Nodes
   private List<Node> _rootNodes = new List<Node>();
   private List<Node> _nodes = new List<Node>();
   private List<int> _nodesInAttractionZone = new List<int>();
   private List<Node> _nodesToAdd = new List<Node>();
-  private List<List<Vector3>> _branches = new List<List<Vector3>>();
-  private List<List<float>> _radii = new List<List<float>>();
-  private List<CombineInstance> _branchMeshes = new List<CombineInstance>();
 
   private KDTree _nodeTree;               // spatial index of vein nodes
   private KDQuery query = new KDQuery();  // query object for spatial indices
 
+  // Branch meshes and data
+  private List<List<Vector3>> _branches = new List<List<Vector3>>();
+  private List<List<float>> _branchRadii = new List<List<float>>();
+  private List<CombineInstance> _branchMeshes = new List<CombineInstance>();
+
+  // Patch meshes and data
+  private List<List<Vector3>> _patches = new List<List<Vector3>>();
+  private List<List<float>> _patchRadii = new List<List<float>>();
+  private List<CombineInstance> _patchMeshes = new List<CombineInstance>();
+
+  // Tube renderer and output mesh
   private TubeRenderer tube;
   private GameObject veinsObject;
   private MeshFilter filter;
@@ -134,30 +145,32 @@ public class GrowthManager : MonoBehaviour {
       // bool isHit = false;
       // RaycastHit hitInfo;
 
-      // do {
-      //   Vector3 startingPoint = Random.onUnitSphere * 2;
-      //   Vector3 targetPoint = Random.onUnitSphere * .5f;
+      // for(int i=0; i<4; i++) {
+        // do {
+        //   Vector3 startingPoint = Random.onUnitSphere * 5;
+        //   Vector3 targetPoint = Random.onUnitSphere * .5f;
 
-      //   isHit = Physics.Raycast(
-      //     startingPoint,
-      //     targetPoint,
-      //     out hitInfo,
-      //     Mathf.Infinity,
-      //     LayerMask.GetMask("Targets"),
-      //     QueryTriggerInteraction.Ignore
-      //   );
+        //   isHit = Physics.Raycast(
+        //     startingPoint,
+        //     targetPoint,
+        //     out hitInfo,
+        //     Mathf.Infinity,
+        //     LayerMask.GetMask("Targets"),
+        //     QueryTriggerInteraction.Ignore
+        //   );
 
-      //   if(isHit) {
-      //     _rootNodes.Add(
-      //       new Node(
-      //         hitInfo.point,
-      //         null,
-      //         true,
-      //         MinimumRadius
-      //       )
-      //     );
-      //   }
-      // } while(!isHit);
+        //   if(isHit) {
+        //     _rootNodes.Add(
+        //       new Node(
+        //         hitInfo.point,
+        //         null,
+        //         true,
+        //         MinimumRadius
+        //       )
+        //     );
+        //   }
+        // } while(!isHit);
+      // }
 
       // ORIGIN -------------------------------------------------
       // _rootNodes.Add(
@@ -222,6 +235,7 @@ public class GrowthManager : MonoBehaviour {
       //   );
       // }
 
+      // Add root nodes to node tree
       foreach(Node rootNode in _rootNodes) {
         _nodes.Add(rootNode);
       }
@@ -249,7 +263,7 @@ public class GrowthManager : MonoBehaviour {
     BuildSpatialIndex();
 
     // 5. Generate tube meshes to render the vein network ==================================================================
-    GenerateBranchMeshes();
+    CreateMeshes();
   }
 
     void AssociateAttractors() {
@@ -404,39 +418,58 @@ public class GrowthManager : MonoBehaviour {
       Profiler.EndSample();
     }
 
-    void GenerateBranchMeshes() {
-      Profiler.BeginSample("GenerateBranchMeshes");
+    void CreateMeshes() {
+      Profiler.BeginSample("CreateMeshes");
+
+      List<CombineInstance> branchMeshes = GetBranchMeshes();
+      List<CombineInstance> patchMeshes = GetPatchMeshes();
+      List<CombineInstance> allMeshes = new List<CombineInstance>();
+
+      allMeshes.AddRange(branchMeshes);
+      allMeshes.AddRange(patchMeshes);
+
+      filter.mesh.CombineMeshes(allMeshes.ToArray());
+
+      Profiler.EndSample();
+    }
+
+    List<CombineInstance> GetBranchMeshes() {
+      Profiler.BeginSample("GetBranchMeshes");
 
       _branches.Clear();
-      _radii.Clear();
+      _branchRadii.Clear();
 
+      // Recursively populate the _branches array
       foreach(Node rootNode in _rootNodes) {
         GetBranch(rootNode);
       }
 
-      CombineInstance[] combineInstances = new CombineInstance[_branches.Count];
-
+      List<CombineInstance> combineInstances = new List<CombineInstance>();
       int t = 0;
+
+      // Create continuous tube meshes for each branch
       foreach(List<Vector3> branch in _branches) {
         tube.points = new Vector3[branch.Count];
         tube.radiuses = new float[branch.Count];
 
         for(int j=0; j<branch.Count; j++) {
           tube.points[j] = branch[j];
-          tube.radiuses[j] = _radii[t][j];
+          tube.radiuses[j] = _branchRadii[t][j];
         }
 
         tube.ForceUpdate();
 
-        combineInstances[t].mesh = Instantiate(tube.mesh);
-        combineInstances[t].transform = tube.transform.localToWorldMatrix;
+        CombineInstance cb = new CombineInstance();
+        cb.mesh = Instantiate(tube.mesh);  // Instantiate is expensive AF - needs improvement!
+        cb.transform = tube.transform.localToWorldMatrix;
+        combineInstances.Add(cb);
 
         t++;
       }
 
-      filter.mesh.CombineMeshes(combineInstances);
-
       Profiler.EndSample();
+
+      return combineInstances;
     }
 
       private void GetBranch(Node startingNode) {
@@ -470,7 +503,85 @@ public class GrowthManager : MonoBehaviour {
         }
 
         _branches.Add(thisBranch);
-        _radii.Add(thisRadii);
+        _branchRadii.Add(thisRadii);
+
+        Profiler.EndSample();
+      }
+
+    List<CombineInstance> GetPatchMeshes() {
+      Profiler.BeginSample("GetPatchMeshes");
+
+      _patches.Clear();
+      _patchRadii.Clear();
+
+      // Recursively populate the _patches array
+      foreach(Node rootNode in _rootNodes) {
+        GetPatches(rootNode);
+      }
+
+      List<CombineInstance> combineInstances = new List<CombineInstance>();
+      int t = 0;
+
+      // Create continuous tube meshes for each patch
+      foreach(List<Vector3> patch in _patches) {
+        tube.points = new Vector3[patch.Count];
+        tube.radiuses = new float[patch.Count];
+
+        for(int j=0; j<patch.Count; j++) {
+          tube.points[j] = patch[j];
+          tube.radiuses[j] = _patchRadii[t][j];
+        }
+
+        tube.ForceUpdate();
+
+        CombineInstance cb = new CombineInstance();
+        cb.mesh = Instantiate(tube.mesh);  // Instantiate is expensive AF - needs improvement!
+        cb.transform = tube.transform.localToWorldMatrix;
+        combineInstances.Add(cb);
+
+        t++;
+      }
+
+      Profiler.EndSample();
+
+      return combineInstances;
+    }
+
+      private void GetPatches(Node startingNode) {
+        Profiler.BeginSample("GetPatches");
+
+        Node currentNode = startingNode;
+        List<Vector3> thisPatch;
+        List<float> thisRadii;
+
+        while(currentNode != null && currentNode.children.Count > 0) {
+          if(currentNode.children.Count == 1) {
+            currentNode = currentNode.children[0];
+
+          } else if(currentNode.children.Count > 1) {
+            Node previousNode = currentNode.parent == null ? currentNode : currentNode.parent;
+
+            foreach(Node nextNode in currentNode.children) {
+              thisPatch = new List<Vector3>();
+              thisRadii = new List<float>();
+
+              thisPatch.Add(previousNode.position);
+              thisPatch.Add(currentNode.position);
+              thisPatch.Add(nextNode.position);
+
+              thisRadii.Add(previousNode.radius);
+              thisRadii.Add(currentNode.radius);
+              thisRadii.Add(nextNode.radius);
+
+              _patches.Add(thisPatch);
+              _patchRadii.Add(thisRadii);
+
+              GetPatches(nextNode);
+            }
+
+            currentNode = null;
+          }
+        }
 
         Profiler.EndSample();
       }
