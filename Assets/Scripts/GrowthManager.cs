@@ -10,6 +10,8 @@ public class GrowthManager : MonoBehaviour {
   public float AttractionDistance;
   public float KillDistance;
   public float SegmentLength;
+  public int MaxAttractorAge;
+  public bool EnableAttractorAging;
 
   public float MinimumRadius;
   public float MaximumRadius;
@@ -57,6 +59,8 @@ public class GrowthManager : MonoBehaviour {
     AttractionDistance = .3f;
     KillDistance = .05f;
     SegmentLength = .04f;
+    MaxAttractorAge = 1000;
+    EnableAttractorAging = false;
 
     MinimumRadius = .003f;
     MaximumRadius = .015f;
@@ -120,7 +124,10 @@ public class GrowthManager : MonoBehaviour {
 
       // Create Attractors from GameObjects created by AttractorGenerator script
       foreach(GameObject attractorObject in _attractorObjects) {
-        _attractors.Add(new Attractor(attractorObject.transform.position));
+        Attractor attractor = new Attractor(attractorObject.transform.position);
+        attractor.age = EnableAttractorAging ? 0 : -1;
+
+        _attractors.Add(attractor);
         Destroy(attractorObject);
       }
     }
@@ -403,8 +410,13 @@ public class GrowthManager : MonoBehaviour {
       _attractorsToRemove.Clear();
 
       foreach(Attractor attractor in _attractors) {
+        // Increment attractor age
+        if(attractor.age != -1) {
+          attractor.age += 1;
+        }
+
         // a. Open venation = as soon as the closest vein node enters KillDistance
-        if(attractor.isReached) {
+        if(attractor.isReached || (attractor.age != -1 && attractor.age > MaxAttractorAge)) {
           _attractorsToRemove.Add(attractor);
         }
 
