@@ -68,7 +68,7 @@ public class GrowthManager : MonoBehaviour {
     EnableAttractorAging = false;
 
     MinimumRadius = .003f;
-    MaximumRadius = .015f;
+    MaximumRadius = .03f;
     RadiusIncrement = .00005f;
     EnableCanalization = true;
 
@@ -91,7 +91,7 @@ public class GrowthManager : MonoBehaviour {
     boundsEnabled = _bounds == null ? false : true;
 
     // Retrieve any externally-generated attractors or obstacles
-    _attractorObjects = GetAllChildren(GameObject.Find("Attractors"));
+    // _attractorObjects = GetAllChildren(GameObject.Find("Attractors"));
     _obstacles = GetAllChildren(GameObject.Find("Obstacles"));
 
     CreateAttractors();
@@ -109,35 +109,39 @@ public class GrowthManager : MonoBehaviour {
       // }
 
       // Points in a 3D grid
-      // int rowResolution = 6;
-      // int colResolution = 12;
-      // int depthResolution = 6;
-      // float jitterAmount = .025f;
+      float width = 4f;
+      float height = 2f;
+      float depth = 3.5f;
 
-      // for(int row = 0; row <= rowResolution; row++) {
-      //   for(int col = 0; col <= colResolution; col++) {
-      //     for(int depth = 0; depth <= depthResolution; depth++) {
-      //       _attractors.Add(
-      //         new Attractor(
-      //           new Vector3(
-      //             col * (1f/colResolution) - .5f + Random.Range(-jitterAmount, jitterAmount),
-      //             row * (.5f/rowResolution) - .25f + Random.Range(-jitterAmount, jitterAmount),
-      //             depth * (.5f/depthResolution) - .25f + Random.Range(-jitterAmount, jitterAmount)
-      //           )
-      //         )
-      //       );
-      //     }
-      //   }
-      // }
+      int xResolution = 15;
+      int yResolution = 10;
+      int zResolution = 15;
+      float jitterAmount = .1f;
+
+      for(int x = 0; x <= xResolution; x++) {
+        for(int y = 0; y <= yResolution; y++) {
+          for(int z = 0; z <= zResolution; z++) {
+            _attractors.Add(
+              new Attractor(
+                new Vector3(
+                  x * (width/xResolution) - width/2 + Random.Range(-jitterAmount, jitterAmount),
+                  y * (height/yResolution) - height/2 + Random.Range(-jitterAmount, jitterAmount),
+                  z * (depth/zResolution) - depth/2 + Random.Range(-jitterAmount, jitterAmount)
+                )
+              )
+            );
+          }
+        }
+      }
 
       // Create Attractors from GameObjects created by AttractorGenerator script
-      foreach(GameObject attractorObject in _attractorObjects) {
-        Attractor attractor = new Attractor(attractorObject.transform.position);
-        attractor.age = EnableAttractorAging ? 0 : -1;
+      // foreach(GameObject attractorObject in _attractorObjects) {
+      //   Attractor attractor = new Attractor(attractorObject.transform.position);
+      //   attractor.age = EnableAttractorAging ? 0 : -1;
 
-        _attractors.Add(attractor);
-        Destroy(attractorObject);
-      }
+      //   _attractors.Add(attractor);
+      //   Destroy(attractorObject);
+      // }
     }
 
     void CreateRootVeins() {
@@ -264,9 +268,14 @@ public class GrowthManager : MonoBehaviour {
     }
 
     // Reload the scene when "r" is pressed
-    if(Input.GetKeyUp("r")) {
-      SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
+    if(Input.GetKeyUp("r")) { ResetScene(); }
+
+    // Load preset with number keys
+    if(Input.GetKeyUp("1")) { LoadPreset1(); }
+    if(Input.GetKeyUp("2")) { LoadPreset2(); }
+    if(Input.GetKeyUp("3")) { LoadPreset3(); }
+    if(Input.GetKeyUp("4")) { LoadPreset4(); }
+    if(Input.GetKeyUp("5")) { LoadPreset5(); }
 
     // Stop iterations when paused
     if(isPaused) { return; }
@@ -687,5 +696,35 @@ public class GrowthManager : MonoBehaviour {
     }
 
     return children;
+  }
+
+  public void ResetScene() {
+    Debug.Log("Reloading scene ...");
+    SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+  }
+
+  public void LoadPreset1() {
+    Debug.Log("Loading preset 1 ...");
+    ResetScene();
+  }
+
+  public void LoadPreset2() {
+    Debug.Log("Loading preset 2 ...");
+    ResetScene();
+  }
+
+  public void LoadPreset3() {
+    Debug.Log("Loading preset 3 ...");
+    ResetScene();
+  }
+
+  public void LoadPreset4() {
+    Debug.Log("Loading preset 4 ...");
+    ResetScene();
+  }
+
+  public void LoadPreset5() {
+    Debug.Log("Loading preset 5 ...");
+    ResetScene();
   }
 }
