@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
+using UnityEditor.SceneManagement;
 using DataStructures.ViliWonka.KDTree;
 
+[ExecuteInEditMode]
 public class GrowthManager : MonoBehaviour {
   public Transform InputRootNode;
 
@@ -29,7 +31,7 @@ public class GrowthManager : MonoBehaviour {
 
   private RaycastHit[] hits;
 
-  bool isPaused = true;
+  public bool isPaused = true;
   bool boundsEnabled;
 
   // Attractors
@@ -78,6 +80,7 @@ public class GrowthManager : MonoBehaviour {
 
     // Set up a separate GameObject to render the veins to
     veinsObject = new GameObject("Veins");
+    veinsObject.transform.SetParent(gameObject.transform);
     veinsObject.AddComponent<MeshRenderer>();
     filter = veinsObject.AddComponent<MeshFilter>();
     filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
@@ -85,6 +88,7 @@ public class GrowthManager : MonoBehaviour {
 
     // Set up the tube renderer
     tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
+    tube.transform.SetParent(gameObject.transform);
 
     // Retrieve any active bounds meshes
     _bounds = GetAllChildren(GameObject.Find("Bounds"))[0];
@@ -470,7 +474,7 @@ public class GrowthManager : MonoBehaviour {
       allMeshes.AddRange(branchMeshes);
       allMeshes.AddRange(patchMeshes);
 
-      filter.mesh.CombineMeshes(allMeshes.ToArray());
+      filter.sharedMesh.CombineMeshes(allMeshes.ToArray());
 
       Profiler.EndSample();
     }
@@ -700,7 +704,12 @@ public class GrowthManager : MonoBehaviour {
 
   public void ResetScene() {
     Debug.Log("Reloading scene ...");
-    SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
+    if(Application.isEditor) {
+      EditorSceneManager.OpenScene("Assets/Scenes/Basic.unity");
+    } else {
+      SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
   }
 
   public void LoadPreset1() {
@@ -726,5 +735,11 @@ public class GrowthManager : MonoBehaviour {
   public void LoadPreset5() {
     Debug.Log("Loading preset 5 ...");
     ResetScene();
+  }
+
+  public void GrowInEditor() {
+    for(int i=0; i<10; i++) {
+      Update();
+    }
   }
 }
