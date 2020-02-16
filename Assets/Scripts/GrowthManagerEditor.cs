@@ -7,10 +7,28 @@ public class GrowthManagerEditor : Editor {
   public override void OnInspectorGUI() {
     GrowthManager manager = (GrowthManager)target;
 
-    manager.InputRootNode = (Transform)EditorGUILayout.ObjectField("Custom root node", manager.InputRootNode, typeof(Transform), true);
+    DrawDefaultInspector();
 
-    manager.AttractionDistance = EditorGUILayout.Slider("Attraction distance", manager.AttractionDistance, 10f, 200f);
-    manager.KillDistance = EditorGUILayout.Slider("Kill distance", manager.KillDistance, 1f, 50f);
-    manager.SegmentLength = EditorGUILayout.Slider("Segment length", manager.SegmentLength, 1f, 100f);
+    EditorGUILayout.BeginHorizontal();
+
+      if(GUILayout.Button("Grow")) {
+        manager.GrowInEditor();
+      }
+
+      if(GUILayout.Button("Reset")) {
+        manager.ResetScene();
+      }
+
+    EditorGUILayout.EndHorizontal();
+
+    EditorGUILayout.BeginHorizontal();
+
+      if(GUILayout.Button("1")) { manager.LoadPreset1(); }
+      if(GUILayout.Button("2")) { manager.LoadPreset2(); }
+      if(GUILayout.Button("3")) { manager.LoadPreset3(); }
+      if(GUILayout.Button("4")) { manager.LoadPreset4(); }
+      if(GUILayout.Button("5")) { manager.LoadPreset5(); }
+
+    EditorGUILayout.EndHorizontal();
   }
 }
