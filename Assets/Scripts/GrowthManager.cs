@@ -6,7 +6,6 @@ using UnityEngine.SceneManagement;
 using UnityEditor.SceneManagement;
 using DataStructures.ViliWonka.KDTree;
 
-[ExecuteInEditMode]
 public class GrowthManager : MonoBehaviour {
   public Transform InputRootNode;
 
@@ -28,18 +27,14 @@ public class GrowthManager : MonoBehaviour {
   public int AttractorRaycastAttempts;
   public float AttractorSurfaceOffset;
 
-  private const int ATTRACTORS_ON_MESH = 0;
-  private const int ATTRACTORS_GRID = 1;
-  private const int ATTRACTORS_SPHERE = 2;
-  public int AttractorsType = ATTRACTORS_ON_MESH;
+  public enum AttractorsType {MESH, GRID, SPHERE};
+  public AttractorsType attractorsType;
 
-  private const int ATTRACTOR_RAYCAST_OUTWARDS = 0;
-  private const int ATTRACTOR_RAYCAST_INWARDS = 1;
-  public int AttractorRaycastingType = ATTRACTOR_RAYCAST_INWARDS;
+  public enum AttractorRaycastingType {OUTWARDS, INWARDS};
+  public AttractorRaycastingType attractorRaycastingType;
 
-  // input gameobject
-  // random point on mesh
-  public int RootVeinType;
+  public enum RootNodeType {INPUT, ORIGIN, MESH_SINGLE, MESH_THREE};
+  public RootNodeType rootNodeType;
 
   private GameObject _bounds;
   private List<GameObject> _obstacles;
@@ -47,7 +42,7 @@ public class GrowthManager : MonoBehaviour {
 
   private RaycastHit[] hits;
 
-  public bool isPaused = true;
+  public bool isPaused = false;
   bool boundsEnabled;
 
   // Attractors
@@ -80,11 +75,13 @@ public class GrowthManager : MonoBehaviour {
 
 
   /*
-  ========================
-    INITIAL SETUP
-  ========================
+  =================================
+    RESET
+    Called when script component
+    is reset in Editor
+  =================================
   */
-  void Start() {
+  void Reset() {
     AttractionDistance = .3f;
     KillDistance = .05f;
     SegmentLength = .04f;
@@ -102,6 +99,22 @@ public class GrowthManager : MonoBehaviour {
 
     AttractorRaycastAttempts = 200000;
     AttractorSurfaceOffset = .01f;
+
+    attractorsType = AttractorsType.MESH;
+    attractorRaycastingType = AttractorRaycastingType.INWARDS;
+    rootNodeType = RootNodeType.MESH_SINGLE;
+
+    InputRootNode = GameObject.Find("Root node").transform;
+  }
+
+
+  /*
+  ========================
+    INITIAL SETUP
+  ========================
+  */
+  void Start() {
+    Reset();
 
     // Retrieve any active bounds meshes
     _bounds = GetAllChildren(GameObject.Find("Bounds"))[0];
@@ -156,14 +169,14 @@ public class GrowthManager : MonoBehaviour {
 
       _attractors.Clear();
 
-      switch(AttractorsType) {
+      switch(attractorsType) {
         // Create attractors on target mesh(es) using raycasting ------------------------------------
-        case ATTRACTORS_ON_MESH:
+        case AttractorsType.MESH:
           CreateAttractorsOnMeshSurface();
           break;
 
         // Points in a 3D grid ----------------------------------------------------------------------
-        case ATTRACTORS_GRID:
+        case AttractorsType.GRID:
           float width = 4f;
           float height = 2f;
           float depth = 3.5f;
@@ -192,7 +205,7 @@ public class GrowthManager : MonoBehaviour {
           break;
 
         // Points in a sphere ----------------------------------------------------------------------
-        case ATTRACTORS_SPHERE:
+        case AttractorsType.SPHERE:
           for (int i = 0; i < 1000; i++) {
             _attractors.Add(new Attractor(Random.insideUnitSphere * .75f));
           }
@@ -214,17 +227,17 @@ public class GrowthManager : MonoBehaviour {
           Vector3 startingPoint = Vector3.zero;
           Vector3 targetPoint = Vector3.zero;
 
-          switch(AttractorRaycastingType) {
+          switch(attractorRaycastingType) {
             // Inside-out raycasting
-            case ATTRACTOR_RAYCAST_OUTWARDS:
-              startingPoint = Random.onUnitSphere * 5;
-              targetPoint = Random.onUnitSphere * .1f;
+            case AttractorRaycastingType.OUTWARDS:
+              startingPoint = new Vector3(0f,.5f,0);
+              targetPoint = Random.onUnitSphere * 10f;
               break;
 
             // Outside-in raycasting
-            case ATTRACTOR_RAYCAST_INWARDS:
-              startingPoint = new Vector3(0f,.5f,0);
-              targetPoint = Random.onUnitSphere * 10f;
+            case AttractorRaycastingType.INWARDS:
+              startingPoint = Random.onUnitSphere * 5;
+              targetPoint = Random.onUnitSphere * .1f;
               break;
           }
 
@@ -267,58 +280,75 @@ public class GrowthManager : MonoBehaviour {
       _nodes.Clear();
       _rootNodes.Clear();
 
-      // ROOT NODE FROM PROVIDED TRANSFORM ----------------------
-      if(InputRootNode != null) {
-        _rootNodes.Add(
-          new Node(
-            InputRootNode.position,
-            null,
-            true,
-            MinimumRadius
-          )
-        );
+      switch(rootNodeType) {
+        // Root node from provided transform ------------------------------------------------------
+        case RootNodeType.INPUT:
+          if(InputRootNode != null) {
+            _rootNodes.Add(
+              new Node(
+                InputRootNode.position,
+                null,
+                true,
+                MinimumRadius
+              )
+            );
+          }
+
+          break;
+
+        // Root node at origin --------------------------------------------------------------------
+        case RootNodeType.ORIGIN:
+          _rootNodes.Add(
+            new Node(
+              Vector3.zero,
+              null,
+              true,
+              MinimumRadius
+            )
+          );
+
+          break;
+
+        // Random point(s) on mesh ----------------------------------------------------------------
+        case RootNodeType.MESH_SINGLE:
+        case RootNodeType.MESH_THREE:
+          int numRoots = -1;
+
+          if(rootNodeType == RootNodeType.MESH_SINGLE) { numRoots = 1; }
+          else if(rootNodeType == RootNodeType.MESH_THREE) { numRoots = 3; }
+
+          bool isHit = false;
+          RaycastHit hitInfo;
+
+          for(int i=0; i<numRoots; i++) {
+            do {
+              Vector3 startingPoint = Random.onUnitSphere * 5;
+              Vector3 targetPoint = Random.onUnitSphere * .5f;
+
+              isHit = Physics.Raycast(
+                startingPoint,
+                targetPoint,
+                out hitInfo,
+                Mathf.Infinity,
+                LayerMask.GetMask("Targets"),
+                QueryTriggerInteraction.Ignore
+              );
+
+              if(isHit) {
+                _rootNodes.Add(
+                  new Node(
+                    hitInfo.point,
+                    null,
+                    true,
+                    MinimumRadius
+                  )
+                );
+              }
+            } while(!isHit);
+          }
+
+          break;
       }
-
-      // RANDOM POINT ON MESH -----------------------------------
-      // bool isHit = false;
-      // RaycastHit hitInfo;
-
-      // for(int i=0; i<4; i++) {
-        // do {
-        //   Vector3 startingPoint = Random.onUnitSphere * 5;
-        //   Vector3 targetPoint = Random.onUnitSphere * .5f;
-
-        //   isHit = Physics.Raycast(
-        //     startingPoint,
-        //     targetPoint,
-        //     out hitInfo,
-        //     Mathf.Infinity,
-        //     LayerMask.GetMask("Targets"),
-        //     QueryTriggerInteraction.Ignore
-        //   );
-
-        //   if(isHit) {
-        //     _rootNodes.Add(
-        //       new Node(
-        //         hitInfo.point,
-        //         null,
-        //         true,
-        //         MinimumRadius
-        //       )
-        //     );
-        //   }
-        // } while(!isHit);
-      // }
-
-      // ORIGIN -------------------------------------------------
-      // _rootNodes.Add(
-      //   new Node(
-      //     Vector3.zero,
-      //     null,
-      //     true,
-      //     MinimumRadius
-      //   )
-      // );
 
       // ROCKS --------------------------------------------------
       // _rootNodes.Add(
@@ -857,6 +887,12 @@ public class GrowthManager : MonoBehaviour {
     return children;
   }
 
+  public void GrowInEditor() {
+    for(int i=0; i<10; i++) {
+      Update();
+    }
+  }
+
 
   /*
   ========================
@@ -911,11 +947,5 @@ public class GrowthManager : MonoBehaviour {
   public void LoadPreset5() {
     Debug.Log("Loading preset 5 ...");
     ResetScene();
-  }
-
-  public void GrowInEditor() {
-    for(int i=0; i<10; i++) {
-      Update();
-    }
   }
 }
