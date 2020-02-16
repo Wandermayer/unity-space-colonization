@@ -78,31 +78,38 @@ public class GrowthManager : MonoBehaviour {
     _numIterations = 0;
     EnableMaxIterations = false;
 
-    // Set up a separate GameObject to render the veins to
-    veinsObject = new GameObject("Veins");
-    veinsObject.transform.SetParent(gameObject.transform);
-    veinsObject.AddComponent<MeshRenderer>();
-    filter = veinsObject.AddComponent<MeshFilter>();
-    filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-    veinsObject.GetComponent<Renderer>().material = Resources.Load<Material>("Bark_18");
-
-    // Set up the tube renderer
-    tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
-    tube.transform.SetParent(gameObject.transform);
-
     // Retrieve any active bounds meshes
     _bounds = GetAllChildren(GameObject.Find("Bounds"))[0];
     boundsEnabled = _bounds == null ? false : true;
 
-    // Retrieve any externally-generated attractors or obstacles
-    // _attractorObjects = GetAllChildren(GameObject.Find("Attractors"));
+    // Retrieve any active obstacles
     _obstacles = GetAllChildren(GameObject.Find("Obstacles"));
 
+    SetupMeshes();
     CreateAttractors();
     CreateRootVeins();
 
     BuildSpatialIndex();
   }
+
+    void SetupMeshes() {
+      // Remove all children (veins/tube) that can build up when switching between Editor and Game modes
+      while(transform.childCount > 0) {
+        DestroyImmediate(transform.GetChild(0).gameObject);
+      }
+
+      // Set up a separate GameObject to render the veins to
+      veinsObject = new GameObject("Veins");
+      veinsObject.transform.SetParent(gameObject.transform);
+      veinsObject.AddComponent<MeshRenderer>();
+      filter = veinsObject.AddComponent<MeshFilter>();
+      filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+      veinsObject.GetComponent<Renderer>().material = Resources.Load<Material>("Bark_18");
+
+      // Set up the tube renderer
+      tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
+      tube.transform.SetParent(gameObject.transform);
+    }
 
     void CreateAttractors() {
       _attractors.Clear();
@@ -113,40 +120,75 @@ public class GrowthManager : MonoBehaviour {
       // }
 
       // Points in a 3D grid
-      float width = 4f;
-      float height = 2f;
-      float depth = 3.5f;
+      // float width = 4f;
+      // float height = 2f;
+      // float depth = 3.5f;
 
-      int xResolution = 15;
-      int yResolution = 10;
-      int zResolution = 15;
-      float jitterAmount = .1f;
+      // int xResolution = 15;
+      // int yResolution = 10;
+      // int zResolution = 15;
+      // float jitterAmount = .1f;
 
-      for(int x = 0; x <= xResolution; x++) {
-        for(int y = 0; y <= yResolution; y++) {
-          for(int z = 0; z <= zResolution; z++) {
-            _attractors.Add(
-              new Attractor(
-                new Vector3(
-                  x * (width/xResolution) - width/2 + Random.Range(-jitterAmount, jitterAmount),
-                  y * (height/yResolution) - height/2 + Random.Range(-jitterAmount, jitterAmount),
-                  z * (depth/zResolution) - depth/2 + Random.Range(-jitterAmount, jitterAmount)
-                )
-              )
-            );
-          }
-        }
-      }
+      // for(int x = 0; x <= xResolution; x++) {
+      //   for(int y = 0; y <= yResolution; y++) {
+      //     for(int z = 0; z <= zResolution; z++) {
+      //       _attractors.Add(
+      //         new Attractor(
+      //           new Vector3(
+      //             x * (width/xResolution) - width/2 + Random.Range(-jitterAmount, jitterAmount),
+      //             y * (height/yResolution) - height/2 + Random.Range(-jitterAmount, jitterAmount),
+      //             z * (depth/zResolution) - depth/2 + Random.Range(-jitterAmount, jitterAmount)
+      //           )
+      //         )
+      //       );
+      //     }
+      //   }
+      // }
 
       // Create Attractors from GameObjects created by AttractorGenerator script
-      // foreach(GameObject attractorObject in _attractorObjects) {
-      //   Attractor attractor = new Attractor(attractorObject.transform.position);
-      //   attractor.age = EnableAttractorAging ? 0 : -1;
-
-      //   _attractors.Add(attractor);
-      //   Destroy(attractorObject);
-      // }
+      CreateAttractorsOnMeshSurface();
     }
+
+      public void CreateAttractorsOnMeshSurface() {
+        int NumAttempts = 200000;
+        int hitCount = 0;
+        float offset = 0f;
+
+        for(int i=0; i<NumAttempts; i++) {
+          RaycastHit hitInfo;
+
+          // Outside in raycasting
+          Vector3 startingPoint = Random.onUnitSphere * 5;
+          Vector3 targetPoint = Random.onUnitSphere * .1f;
+
+          // Inside out raycasting
+          // Vector3 startingPoint = new Vector3(0f,.5f,0);
+          // Vector3 targetPoint = Random.onUnitSphere * 10f;
+
+          bool bHit = Physics.Raycast(
+            startingPoint,
+            targetPoint,
+            out hitInfo,
+            Mathf.Infinity,
+            LayerMask.GetMask("Targets"),
+            QueryTriggerInteraction.Ignore
+          );
+
+          if(bHit) {
+            // How much distance should there be between attractor and hit surface?
+            // offset = Random.Range(.015f, .16f);
+            _attractors.Add(new Attractor(hitInfo.point + (hitInfo.normal * offset)));
+
+            // Color rayColor;
+            // rayColor = Color.red;
+            // Debug.DrawLine(startingPoint, targetPoint, rayColor, 10f);
+
+            hitCount++;
+          }
+        }
+
+        // Debug.Log(hitCount + " hits");
+      }
 
     void CreateRootVeins() {
       _nodes.Clear();
@@ -635,23 +677,21 @@ public class GrowthManager : MonoBehaviour {
   void OnDrawGizmos() {
     Profiler.BeginSample("OnDrawGizmos");
 
-    if(Application.isPlaying) {
-      // Draw a spheres for all attractors
-      Gizmos.color = Color.yellow;
-      foreach(Attractor attractor in _attractors) {
-        Gizmos.DrawSphere(attractor.position, .005f);
+    // Draw a spheres for all attractors
+    Gizmos.color = Color.yellow;
+    foreach(Attractor attractor in _attractors) {
+      Gizmos.DrawSphere(attractor.position, .005f);
+    }
+
+    // Draw lines to connect each vein node
+    // Gizmos.color = Random.ColorHSV();
+    Gizmos.color = Color.white;
+    foreach(Node node in _nodes) {
+      if(node.parent != null) {
+        Gizmos.DrawLine(node.parent.position, node.position);
       }
 
-      // Draw lines to connect each vein node
-      // Gizmos.color = Random.ColorHSV();
-      Gizmos.color = Color.white;
-      foreach(Node node in _nodes) {
-        if(node.parent != null) {
-          Gizmos.DrawLine(node.parent.position, node.position);
-        }
-
-        // Gizmos.DrawSphere(node.position, 1);
-      }
+      // Gizmos.DrawSphere(node.position, 1);
     }
 
     Profiler.EndSample();
@@ -705,11 +745,17 @@ public class GrowthManager : MonoBehaviour {
   public void ResetScene() {
     Debug.Log("Reloading scene ...");
 
-    if(Application.isEditor) {
-      EditorSceneManager.OpenScene("Assets/Scenes/Basic.unity");
-    } else {
-      SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
+    _numIterations = 0;
+
+    _nodes.Clear();
+    _rootNodes.Clear();
+    CreateRootVeins();
+    BuildSpatialIndex();
+
+    CreateAttractors();
+
+    SetupMeshes();
+    CreateMeshes();
   }
 
   public void LoadPreset1() {
