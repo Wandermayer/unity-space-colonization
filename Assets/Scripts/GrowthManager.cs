@@ -217,14 +217,14 @@ public class GrowthManager : MonoBehaviour {
           switch(AttractorRaycastingType) {
             // Inside-out raycasting
             case ATTRACTOR_RAYCAST_OUTWARDS:
-              startingPoint = Random.onUnitSphere * 5;
-              targetPoint = Random.onUnitSphere * .1f;
+              startingPoint = new Vector3(0f,.5f,0);
+              targetPoint = Random.onUnitSphere * 10f;
               break;
 
             // Outside-in raycasting
             case ATTRACTOR_RAYCAST_INWARDS:
-              startingPoint = new Vector3(0f,.5f,0);
-              targetPoint = Random.onUnitSphere * 10f;
+              startingPoint = Random.onUnitSphere * 5;
+              targetPoint = Random.onUnitSphere * .1f;
               break;
           }
 
@@ -857,6 +857,12 @@ public class GrowthManager : MonoBehaviour {
     return children;
   }
 
+  public void GrowInEditor() {
+    for(int i=0; i<10; i++) {
+      Update();
+    }
+  }
+
 
   /*
   ========================
@@ -911,11 +917,5 @@ public class GrowthManager : MonoBehaviour {
   public void LoadPreset5() {
     Debug.Log("Loading preset 5 ...");
     ResetScene();
-  }
-
-  public void GrowInEditor() {
-    for(int i=0; i<10; i++) {
-      Update();
-    }
   }
 }
