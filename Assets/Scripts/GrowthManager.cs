@@ -16,7 +16,7 @@ public class GrowthManager : MonoBehaviour {
   public float MinimumRadius;
   public float MaximumRadius;
   public float RadiusIncrement;
-  public bool canalizationEnabled;
+  public bool EnableCanalization;
 
   private GameObject _bounds;
   private List<GameObject> _obstacles;
@@ -65,8 +65,7 @@ public class GrowthManager : MonoBehaviour {
     MinimumRadius = .003f;
     MaximumRadius = .015f;
     RadiusIncrement = .00005f;
-
-    canalizationEnabled = true;
+    EnableCanalization = true;
 
     // Set up a separate GameObject to render the veins to
     veinsObject = new GameObject("Veins");
@@ -386,7 +385,7 @@ public class GrowthManager : MonoBehaviour {
         _nodes.Add(currentNode);
 
         // Thicken the radius of every parent Node
-        if(canalizationEnabled) {
+        if(EnableCanalization) {
           Profiler.BeginSample("Canalization");
 
           while(currentNode.parent != null) {
