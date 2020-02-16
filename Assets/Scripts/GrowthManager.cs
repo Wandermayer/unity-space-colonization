@@ -18,6 +18,10 @@ public class GrowthManager : MonoBehaviour {
   public float RadiusIncrement;
   public bool EnableCanalization;
 
+  public float MaxIterations;
+  private int _numIterations;
+  public bool EnableMaxIterations;
+
   private GameObject _bounds;
   private List<GameObject> _obstacles;
   private List<GameObject> _attractorObjects;
@@ -66,6 +70,10 @@ public class GrowthManager : MonoBehaviour {
     MaximumRadius = .015f;
     RadiusIncrement = .00005f;
     EnableCanalization = true;
+
+    MaxIterations = 10;
+    _numIterations = 0;
+    EnableMaxIterations = false;
 
     // Set up a separate GameObject to render the veins to
     veinsObject = new GameObject("Veins");
@@ -248,7 +256,12 @@ public class GrowthManager : MonoBehaviour {
     }
 
   void Update() {
-    if(Input.GetKeyUp("space")) { isPaused = !isPaused; }
+    if(EnableMaxIterations && _numIterations > MaxIterations) {
+      isPaused = true;
+    } else if(Input.GetKeyUp("space")) {
+      isPaused = !isPaused;
+    }
+
     if(isPaused) { return; }
 
     // Reset lists of attractors that vein nodes were attracted to last cycle
@@ -270,6 +283,8 @@ public class GrowthManager : MonoBehaviour {
 
     // 5. Generate tube meshes to render the vein network ==================================================================
     CreateMeshes();
+
+    _numIterations++;
   }
 
     void AssociateAttractors() {
