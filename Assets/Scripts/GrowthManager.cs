@@ -942,7 +942,6 @@ public class GrowthManager : MonoBehaviour {
   }
 
     private void HideInactiveMeshes() {
-      Debug.Log(TargetMeshes.Count);
       foreach(KeyValuePair<string, GameObject> targetMesh in TargetMeshes) {
         if(currentTargetMeshName.ToString() == targetMesh.Key) {
           targetMesh.Value.SetActive(true);
@@ -962,7 +961,6 @@ public class GrowthManager : MonoBehaviour {
     Debug.Log("Loading preset 1 ...");
 
     currentTargetMeshName = TargetMeshNames.DryTree;
-
 
     ResetScene();
   }
