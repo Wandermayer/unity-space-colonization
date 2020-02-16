@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEngine.SceneManagement;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
@@ -262,6 +263,12 @@ public class GrowthManager : MonoBehaviour {
       isPaused = !isPaused;
     }
 
+    // Reload the scene when "r" is pressed
+    if(Input.GetKeyUp("r")) {
+      SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    // Stop iterations when paused
     if(isPaused) { return; }
 
     // Reset lists of attractors that vein nodes were attracted to last cycle
