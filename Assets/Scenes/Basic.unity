@@ -3880,6 +3880,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60b9216ece9565b459dcffc62f617217, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  material: {fileID: 2100000, guid: c7ac6d388734f9d47bc41b2d31d839c9, type: 2}
   InputRootNode: {fileID: 415017107}
   AttractionDistance: 0.3
   KillDistance: 0.05
@@ -3898,6 +3899,7 @@ MonoBehaviour:
   attractorRaycastingType: 1
   rootNodeType: 2
   isPaused: 0
+  currentTargetMeshName: 0
 --- !u!4 &1779349943
 Transform:
   m_ObjectHideFlags: 0

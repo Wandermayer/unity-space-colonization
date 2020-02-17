@@ -7,6 +7,7 @@ using UnityEditor.SceneManagement;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
+  public Material material;
   public Transform InputRootNode;
 
   public float AttractionDistance;
@@ -73,6 +74,11 @@ public class GrowthManager : MonoBehaviour {
   private GameObject veinsObject;
   private MeshFilter filter;
 
+  public enum TargetMeshNames {DryTree, Log01, Head, Rock_02, Rock2};
+  public TargetMeshNames currentTargetMeshName;
+
+  IDictionary<string, GameObject> TargetMeshes;
+
 
   /*
   =================================
@@ -105,6 +111,10 @@ public class GrowthManager : MonoBehaviour {
     rootNodeType = RootNodeType.MESH_SINGLE;
 
     InputRootNode = GameObject.Find("Root node").transform;
+
+    FetchTargetMeshes();
+
+    currentTargetMeshName = TargetMeshNames.DryTree;
   }
 
 
@@ -115,6 +125,7 @@ public class GrowthManager : MonoBehaviour {
   */
   void Start() {
     Reset();
+    FetchTargetMeshes();
 
     // Retrieve any active bounds meshes
     _bounds = GetAllChildren(GameObject.Find("Bounds"))[0];
@@ -149,7 +160,7 @@ public class GrowthManager : MonoBehaviour {
       veinsObject.AddComponent<MeshRenderer>();
       filter = veinsObject.AddComponent<MeshFilter>();
       filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-      veinsObject.GetComponent<Renderer>().material = Resources.Load<Material>("Bark_18");
+      veinsObject.GetComponent<Renderer>().material = material;
 
       // Set up the tube renderer
       tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
@@ -893,6 +904,16 @@ public class GrowthManager : MonoBehaviour {
     }
   }
 
+  public void FetchTargetMeshes() {
+    TargetMeshes = new Dictionary<string, GameObject>();
+
+    TargetMeshes.Add("DryTree", GameObject.Find("DryTree"));
+    TargetMeshes.Add("Log01", GameObject.Find("Log01"));
+    TargetMeshes.Add("Head", GameObject.Find("Head"));
+    TargetMeshes.Add("Rock_02", GameObject.Find("Rock_02"));
+    TargetMeshes.Add("Rock2", GameObject.Find("Rock2"));
+  }
+
 
   /*
   ========================
@@ -904,6 +925,9 @@ public class GrowthManager : MonoBehaviour {
 
     // Restart iteration counter
     _numIterations = 0;
+
+    // Hide target meshes based on currently-active target mesh
+    HideInactiveMeshes();
 
     // Reset nodes
     _nodes.Clear();
@@ -918,6 +942,16 @@ public class GrowthManager : MonoBehaviour {
     CreateMeshes();
   }
 
+    private void HideInactiveMeshes() {
+      foreach(KeyValuePair<string, GameObject> targetMesh in TargetMeshes) {
+        if(currentTargetMeshName.ToString() == targetMesh.Key) {
+          targetMesh.Value.SetActive(true);
+        } else {
+          targetMesh.Value.SetActive(false);
+        }
+      }
+    }
+
 
   /*
   ========================
@@ -926,26 +960,41 @@ public class GrowthManager : MonoBehaviour {
   */
   public void LoadPreset1() {
     Debug.Log("Loading preset 1 ...");
+
+    currentTargetMeshName = TargetMeshNames.DryTree;
+
     ResetScene();
   }
 
   public void LoadPreset2() {
     Debug.Log("Loading preset 2 ...");
+
+    currentTargetMeshName = TargetMeshNames.Head;
+
     ResetScene();
   }
 
   public void LoadPreset3() {
     Debug.Log("Loading preset 3 ...");
+
+    currentTargetMeshName = TargetMeshNames.Log01;
+
     ResetScene();
   }
 
   public void LoadPreset4() {
     Debug.Log("Loading preset 4 ...");
+
+    currentTargetMeshName = TargetMeshNames.Rock2;
+
     ResetScene();
   }
 
   public void LoadPreset5() {
     Debug.Log("Loading preset 5 ...");
+
+    // inside volume
+
     ResetScene();
   }
 }

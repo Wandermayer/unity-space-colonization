@@ -15,6 +15,10 @@ public class GrowthManagerEditor : Editor {
         manager.GrowInEditor();
       }
 
+      if(GUILayout.Button("Fetch targets")) {
+        manager.FetchTargetMeshes();
+      }
+
       if(GUILayout.Button("Reset")) {
         manager.ResetScene();
       }
