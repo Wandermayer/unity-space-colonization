@@ -7,6 +7,7 @@ using UnityEditor.SceneManagement;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
+  public Material material;
   public Transform InputRootNode;
 
   public float AttractionDistance;
@@ -159,7 +160,7 @@ public class GrowthManager : MonoBehaviour {
       veinsObject.AddComponent<MeshRenderer>();
       filter = veinsObject.AddComponent<MeshFilter>();
       filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-      veinsObject.GetComponent<Renderer>().material = Resources.Load<Material>("Bark_18");
+      veinsObject.GetComponent<Renderer>().material = material;
 
       // Set up the tube renderer
       tube = new GameObject("(Temporary) Tubes").AddComponent<TubeRenderer>();
