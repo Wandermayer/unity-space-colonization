@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
-using UnityEditor.SceneManagement;
 using DataStructures.ViliWonka.KDTree;
 
 public class GrowthManager : MonoBehaviour {
@@ -27,6 +26,7 @@ public class GrowthManager : MonoBehaviour {
 
   public int AttractorRaycastAttempts;
   public float AttractorSurfaceOffset;
+  public float AttractorGizmoRadius;
 
   public enum AttractorsType {MESH, GRID, SPHERE};
   public AttractorsType attractorsType;
@@ -37,14 +37,13 @@ public class GrowthManager : MonoBehaviour {
   public enum RootNodeType {INPUT, ORIGIN, MESH_SINGLE, MESH_THREE};
   public RootNodeType rootNodeType;
 
+  // Bounds and obstacles
   private GameObject _bounds;
+  private bool boundsEnabled;
   private List<GameObject> _obstacles;
-  private List<GameObject> _attractorObjects;
-
-  private RaycastHit[] hits;
+  private RaycastHit[] hits;  // results of raycast hit-tests against bounds and obstacles
 
   public bool isPaused = false;
-  bool boundsEnabled;
 
   // Attractors
   private List<Attractor> _attractors = new List<Attractor>();
@@ -74,12 +73,6 @@ public class GrowthManager : MonoBehaviour {
   private GameObject veinsObject;
   private MeshFilter filter;
 
-  public enum TargetMeshNames {DryTree, Log01, Head, Rock_02, Rock2};
-  public TargetMeshNames currentTargetMeshName;
-
-  IDictionary<string, GameObject> TargetMeshes;
-
-
   /*
   =================================
     RESET
@@ -105,16 +98,13 @@ public class GrowthManager : MonoBehaviour {
 
     AttractorRaycastAttempts = 200000;
     AttractorSurfaceOffset = .01f;
+    AttractorGizmoRadius = .05f;
 
     attractorsType = AttractorsType.MESH;
     attractorRaycastingType = AttractorRaycastingType.INWARDS;
     rootNodeType = RootNodeType.MESH_SINGLE;
 
     InputRootNode = GameObject.Find("Root node").transform;
-
-    FetchTargetMeshes();
-
-    currentTargetMeshName = TargetMeshNames.DryTree;
   }
 
 
@@ -124,9 +114,6 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   void Start() {
-    Reset();
-    FetchTargetMeshes();
-
     // Retrieve any active bounds meshes
     _bounds = GetAllChildren(GameObject.Find("Bounds"))[0];
     boundsEnabled = _bounds == null ? false : true;
@@ -242,12 +229,12 @@ public class GrowthManager : MonoBehaviour {
             // Inside-out raycasting
             case AttractorRaycastingType.OUTWARDS:
               startingPoint = new Vector3(0f,.5f,0);
-              targetPoint = Random.onUnitSphere * 10f;
+              targetPoint = Random.onUnitSphere * 100f;
               break;
 
             // Outside-in raycasting
             case AttractorRaycastingType.INWARDS:
-              startingPoint = Random.onUnitSphere * 5;
+              startingPoint = Random.onUnitSphere * 100f;
               targetPoint = Random.onUnitSphere * .1f;
               break;
           }
@@ -429,6 +416,13 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   void Update() {
+    // Load scenes based on number key presses
+    if(Input.GetKeyUp("1")) { SceneManager.LoadScene(0); }
+    if(Input.GetKeyUp("2")) { SceneManager.LoadScene(1); }
+    if(Input.GetKeyUp("3")) { SceneManager.LoadScene(2); }
+    if(Input.GetKeyUp("4")) { SceneManager.LoadScene(3); }
+    if(Input.GetKeyUp("5")) { SceneManager.LoadScene(4); }
+
     // Automatically pause when max iterations reached (if enabled)
     if(EnableMaxIterations && _numIterations > MaxIterations) {
       isPaused = true;
@@ -440,13 +434,6 @@ public class GrowthManager : MonoBehaviour {
 
     // Reload the scene when "r" is pressed
     if(Input.GetKeyUp("r")) { ResetScene(); }
-
-    // Load preset with number keys
-    if(Input.GetKeyUp("1")) { LoadPreset1(); }
-    if(Input.GetKeyUp("2")) { LoadPreset2(); }
-    if(Input.GetKeyUp("3")) { LoadPreset3(); }
-    if(Input.GetKeyUp("4")) { LoadPreset4(); }
-    if(Input.GetKeyUp("5")) { LoadPreset5(); }
 
     // Stop iterations when paused
     if(isPaused) { return; }
@@ -824,7 +811,7 @@ public class GrowthManager : MonoBehaviour {
     // Draw a spheres for all attractors
     Gizmos.color = Color.yellow;
     foreach(Attractor attractor in _attractors) {
-      Gizmos.DrawSphere(attractor.position, .005f);
+      Gizmos.DrawSphere(attractor.position, AttractorGizmoRadius);
     }
 
     // Draw lines to connect each vein node
@@ -904,16 +891,6 @@ public class GrowthManager : MonoBehaviour {
     }
   }
 
-  public void FetchTargetMeshes() {
-    TargetMeshes = new Dictionary<string, GameObject>();
-
-    TargetMeshes.Add("DryTree", GameObject.Find("DryTree"));
-    TargetMeshes.Add("Log01", GameObject.Find("Log01"));
-    TargetMeshes.Add("Head", GameObject.Find("Head"));
-    TargetMeshes.Add("Rock_02", GameObject.Find("Rock_02"));
-    TargetMeshes.Add("Rock2", GameObject.Find("Rock2"));
-  }
-
 
   /*
   ========================
@@ -926,9 +903,6 @@ public class GrowthManager : MonoBehaviour {
     // Restart iteration counter
     _numIterations = 0;
 
-    // Hide target meshes based on currently-active target mesh
-    HideInactiveMeshes();
-
     // Reset nodes
     _nodes.Clear();
     _rootNodes.Clear();
@@ -940,61 +914,5 @@ public class GrowthManager : MonoBehaviour {
 
     SetupMeshes();
     CreateMeshes();
-  }
-
-    private void HideInactiveMeshes() {
-      foreach(KeyValuePair<string, GameObject> targetMesh in TargetMeshes) {
-        if(currentTargetMeshName.ToString() == targetMesh.Key) {
-          targetMesh.Value.SetActive(true);
-        } else {
-          targetMesh.Value.SetActive(false);
-        }
-      }
-    }
-
-
-  /*
-  ========================
-    PRESETS
-  ========================
-  */
-  public void LoadPreset1() {
-    Debug.Log("Loading preset 1 ...");
-
-    currentTargetMeshName = TargetMeshNames.DryTree;
-
-    ResetScene();
-  }
-
-  public void LoadPreset2() {
-    Debug.Log("Loading preset 2 ...");
-
-    currentTargetMeshName = TargetMeshNames.Head;
-
-    ResetScene();
-  }
-
-  public void LoadPreset3() {
-    Debug.Log("Loading preset 3 ...");
-
-    currentTargetMeshName = TargetMeshNames.Log01;
-
-    ResetScene();
-  }
-
-  public void LoadPreset4() {
-    Debug.Log("Loading preset 4 ...");
-
-    currentTargetMeshName = TargetMeshNames.Rock2;
-
-    ResetScene();
-  }
-
-  public void LoadPreset5() {
-    Debug.Log("Loading preset 5 ...");
-
-    // inside volume
-
-    ResetScene();
   }
 }

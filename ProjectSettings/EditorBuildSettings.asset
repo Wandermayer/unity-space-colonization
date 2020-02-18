@@ -4,5 +4,20 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Head.unity
+    guid: 5d376d10cab03ed42b403b06f8580ba5
+  - enabled: 1
+    path: Assets/Scenes/Log.unity
+    guid: 1eb740f9602dd4f42a91ae6526a9d5e1
+  - enabled: 1
+    path: Assets/Scenes/Rock_02.unity
+    guid: 3cd5323f4957f5e43aba0180fa1ed520
+  - enabled: 1
+    path: Assets/Scenes/Tall rock.unity
+    guid: 8c4415cd9b3105f4690b07dbf5ed691e
+  - enabled: 1
+    path: Assets/Scenes/Room.unity
+    guid: 8c6e00f12d3e0294589c34ad179cfba4
   m_configObjects: {}
