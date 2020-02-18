@@ -175,13 +175,13 @@ public class GrowthManager : MonoBehaviour {
 
         // Points in a 3D grid ----------------------------------------------------------------------
         case AttractorsType.GRID:
-          float width = 4f;
-          float height = 2f;
-          float depth = 3.5f;
+          float width = 1.5f;
+          float height = .8f;
+          float depth = 2f;
 
-          int xResolution = 15;
-          int yResolution = 10;
-          int zResolution = 15;
+          int xResolution = 8;
+          int yResolution = 6;
+          int zResolution = 8;
           float jitterAmount = .1f;
 
           for(int x = 0; x <= xResolution; x++) {
