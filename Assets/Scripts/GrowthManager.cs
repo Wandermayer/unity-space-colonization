@@ -118,12 +118,8 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   void Start() {
-    // Retrieve any active bounds meshes
-    _bounds = GetAllChildren(GameObject.Find("Bounds"))[0];
-    boundsEnabled = _bounds == null ? false : true;
-
-    // Retrieve any active obstacles
-    _obstacles = GetAllChildren(GameObject.Find("Obstacles"));
+    SetupBounds();        // retrieve any active bounds objects
+    SetupObstacles();     // retrieve any active obstacle objects
 
     SetupMeshes();        // create child GameObjects for veins and TubeRenderer
     CreateAttractors();   // generate attractors based on mode
@@ -135,6 +131,27 @@ public class GrowthManager : MonoBehaviour {
       triggerClick.AddOnStateDownListener(TriggerClick, SteamVR_Input_Sources.Any);
     }
   }
+
+
+    /*
+    ========================
+      BOUNDS
+    ========================
+    */
+    void SetupBounds() {
+      _bounds = GetAllChildren(GameObject.Find("Bounds"))[0];
+      boundsEnabled = _bounds == null ? false : true;
+    }
+
+
+    /*
+    ========================
+      OBSTACLES
+    ========================
+    */
+    void SetupObstacles() {
+      _obstacles = GetAllChildren(GameObject.Find("Obstacles"));
+    }
 
 
     /*
@@ -924,8 +941,12 @@ public class GrowthManager : MonoBehaviour {
     // Reset and generate new attractors
     CreateAttractors();
 
+    // Setup meshes
     SetupMeshes();
     CreateMeshes();
+
+    SetupBounds();
+    SetupObstacles();
   }
 
 
