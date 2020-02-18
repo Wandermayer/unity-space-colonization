@@ -4,8 +4,12 @@ using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
 using DataStructures.ViliWonka.KDTree;
+using Valve.VR;
 
 public class GrowthManager : MonoBehaviour {
+  public SteamVR_Action_Boolean triggerClick;
+  public Transform controller;
+
   public Material material;
   public Transform InputRootNode;
 
@@ -28,7 +32,7 @@ public class GrowthManager : MonoBehaviour {
   public float AttractorSurfaceOffset;
   public float AttractorGizmoRadius;
 
-  public enum AttractorsType {MESH, GRID, SPHERE};
+  public enum AttractorsType {NONE, MESH, GRID, SPHERE};
   public AttractorsType attractorsType;
 
   public enum AttractorRaycastingType {OUTWARDS, INWARDS};
@@ -84,7 +88,7 @@ public class GrowthManager : MonoBehaviour {
     AttractionDistance = .3f;
     KillDistance = .05f;
     SegmentLength = .04f;
-    MaxAttractorAge = 1000;
+    MaxAttractorAge = 10;
     EnableAttractorAging = false;
 
     MinimumRadius = .003f;
@@ -125,6 +129,11 @@ public class GrowthManager : MonoBehaviour {
     CreateAttractors();   // generate attractors based on mode
     CreateRootVeins();    // generate root vein nodes
     BuildSpatialIndex();  // initialize the node spatial index
+
+    // If a trigger action has been, begin listening for it
+    if(triggerClick != null) {
+      triggerClick.AddOnStateDownListener(TriggerClick, SteamVR_Input_Sources.Any);
+    }
   }
 
 
@@ -168,6 +177,9 @@ public class GrowthManager : MonoBehaviour {
       _attractors.Clear();
 
       switch(attractorsType) {
+        case AttractorsType.NONE:
+          break;
+
         // Create attractors on target mesh(es) using raycasting ------------------------------------
         case AttractorsType.MESH:
           CreateAttractorsOnMeshSurface();
@@ -914,5 +926,23 @@ public class GrowthManager : MonoBehaviour {
 
     SetupMeshes();
     CreateMeshes();
+  }
+
+
+  /*
+  ========================
+    VR INPUT
+  ========================
+  */
+  private void TriggerClick(SteamVR_Action_Boolean fromAction, SteamVR_Input_Sources fromSource) {
+    for(int i=0; i<10; i++) {
+      Attractor newAttractor = new Attractor(controller.position + Random.onUnitSphere * 2);
+      newAttractor.age = 0;
+
+      _attractors.Add(newAttractor);
+    }
+
+    Debug.Log("Nodes: " + _nodes.Count);
+    Debug.Log("Attractors: " + _attractors.Count);
   }
 }
