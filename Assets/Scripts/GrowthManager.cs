@@ -8,6 +8,8 @@ using Valve.VR;
 
 public class GrowthManager : MonoBehaviour {
   public SteamVR_Action_Boolean triggerClick;
+  public SteamVR_Action_Boolean togglePause;
+  public SteamVR_Action_Boolean resetVR;
   public Transform controller;
 
   public Material material;
@@ -127,8 +129,10 @@ public class GrowthManager : MonoBehaviour {
     BuildSpatialIndex();  // initialize the node spatial index
 
     // If a trigger action has been, begin listening for it
-    if(triggerClick != null) {
+    if(triggerClick != null && togglePause != null && resetVR != null) {
       triggerClick.AddOnStateDownListener(TriggerClick, SteamVR_Input_Sources.Any);
+      togglePause.AddOnStateDownListener(TogglePauseVR, SteamVR_Input_Sources.Any);
+      resetVR.AddOnStateDownListener(ResetVR, SteamVR_Input_Sources.Any);
     }
   }
 
@@ -965,5 +969,13 @@ public class GrowthManager : MonoBehaviour {
 
     Debug.Log("Nodes: " + _nodes.Count);
     Debug.Log("Attractors: " + _attractors.Count);
+  }
+
+  private void TogglePauseVR(SteamVR_Action_Boolean fromAction, SteamVR_Input_Sources fromSource) {
+    isPaused = !isPaused;
+  }
+
+  private void ResetVR(SteamVR_Action_Boolean fromAction, SteamVR_Input_Sources fromSource) {
+    ResetScene();
   }
 }
