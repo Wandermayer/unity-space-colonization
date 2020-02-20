@@ -3863,6 +3863,12 @@ MonoBehaviour:
   triggerClick:
     actionPath: 
     needsReinit: 0
+  togglePause:
+    actionPath: 
+    needsReinit: 0
+  resetVR:
+    actionPath: 
+    needsReinit: 0
   controller: {fileID: 0}
   material: {fileID: 2100000, guid: 3c014362b93bbb440bc17c76761a497f, type: 2}
   InputRootNode: {fileID: 415017107}
@@ -4428,7 +4434,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 595132041975993641, guid: bb360d7f7a1145946a9cc87e627a0fd9, type: 3}
+  - {fileID: 2100000, guid: 517dc21188800b1458cc2677cce725ae, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
