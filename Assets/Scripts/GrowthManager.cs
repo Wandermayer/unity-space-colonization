@@ -34,7 +34,7 @@ public class GrowthManager : MonoBehaviour {
   public float AttractorSurfaceOffset;
   public float AttractorGizmoRadius;
 
-  public enum AttractorsType {NONE, MESH, GRID, SPHERE};
+  public enum AttractorsType {NONE, MESH, GRID, SPHERE, DOME};
   public AttractorsType attractorsType;
 
   public enum AttractorRaycastingType {OUTWARDS, INWARDS};
@@ -270,6 +270,10 @@ public class GrowthManager : MonoBehaviour {
               startingPoint = Random.onUnitSphere * 100f;
               targetPoint = Random.onUnitSphere * .1f;
               break;
+          }
+
+          if(startingPoint.y < 0) {
+            continue;
           }
 
           bool bHit = Physics.Raycast(
