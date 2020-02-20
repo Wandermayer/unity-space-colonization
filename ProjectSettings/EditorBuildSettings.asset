@@ -20,4 +20,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Room.unity
     guid: 8c6e00f12d3e0294589c34ad179cfba4
+  - enabled: 1
+    path: Assets/Scenes/DryTree.unity
+    guid: cb5f3c8c050a5464281321dfd4fd825a
   m_configObjects: {}
