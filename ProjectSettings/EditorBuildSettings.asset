@@ -6,21 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Original scenes/VR painting.unity
-    guid: 5d376d10cab03ed42b403b06f8580ba5
+    path: Assets/Scenes/DeerSkull + Lab.unity
+    guid: 54c4e8cd1e538c8468042180b299d359
   - enabled: 1
-    path: Assets/Scenes/Original scenes/Log.unity
-    guid: 1eb740f9602dd4f42a91ae6526a9d5e1
-  - enabled: 1
-    path: Assets/Scenes/Original scenes/Rock_02.unity
-    guid: 3cd5323f4957f5e43aba0180fa1ed520
-  - enabled: 1
-    path: Assets/Scenes/Original scenes/Tall rock.unity
-    guid: 8c4415cd9b3105f4690b07dbf5ed691e
-  - enabled: 1
-    path: Assets/Scenes/Original scenes/Room.unity
-    guid: 8c6e00f12d3e0294589c34ad179cfba4
-  - enabled: 1
-    path: Assets/Scenes/Original scenes/DryTree.unity
-    guid: cb5f3c8c050a5464281321dfd4fd825a
+    path: Assets/Scenes/DryTree + Lab.unity
+    guid: 8cb2672b5e55c874b8aa0125e69b298a
   m_configObjects: {}
