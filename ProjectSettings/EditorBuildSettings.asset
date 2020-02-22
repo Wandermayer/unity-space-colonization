@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/IndustrialScene + Gilded Skull.unity
-    guid: 80f1ce040c7180b48bd88bee3a84e6c2
+    path: Assets/Scenes/IndustrialScene + Gilded Skull NEW.unity
+    guid: 8970c8c430e57924a81704dedb5c60df
   - enabled: 1
     path: Assets/Scenes/IndustrialScene + Head (outer) + Wave.unity
     guid: 9dcd20ab9246ab34788bbbfc797a9d35
