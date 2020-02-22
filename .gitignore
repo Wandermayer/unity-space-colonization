@@ -60,3 +60,6 @@ sysinfo.txt
 
 # Crashlytics generated file
 crashlytics-build.properties
+
+# Ignore models that cause LFS overages
+Assets/Models/**/*.obj
