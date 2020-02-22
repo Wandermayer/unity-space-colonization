@@ -1,5 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
@@ -33,6 +36,17 @@ public class GrowthManager : MonoBehaviour {
   public int AttractorRaycastAttempts;
   public float AttractorSurfaceOffset;
   public float AttractorGizmoRadius;
+
+  public float AttractorSphereRadius;
+  public int AttractorSphereCount;
+
+  public float GridWidth;
+  public float GridHeight;
+  public float GridDepth;
+  public int GridXResolution;
+  public int GridYResolution;
+  public int GridZResolution;
+  public float GridJitterAmount;
 
   public enum AttractorsType {NONE, MESH, GRID, SPHERE};
   public AttractorsType attractorsType;
@@ -106,6 +120,17 @@ public class GrowthManager : MonoBehaviour {
     AttractorSurfaceOffset = .01f;
     AttractorGizmoRadius = .05f;
 
+    AttractorSphereRadius = 1f;
+    AttractorSphereCount = 5000;
+
+    GridWidth = 20f;
+    GridHeight = 20f;
+    GridDepth = 20f;
+    GridXResolution = 5;
+    GridYResolution = 5;
+    GridZResolution = 5;
+    GridJitterAmount = 1f;
+
     attractorsType = AttractorsType.MESH;
     attractorRaycastingType = AttractorRaycastingType.INWARDS;
     rootNodeType = RootNodeType.MESH_SINGLE;
@@ -175,7 +200,9 @@ public class GrowthManager : MonoBehaviour {
       veinsObject = new GameObject("Veins");
       veinsObject.transform.SetParent(gameObject.transform);
       veinsObject.AddComponent<MeshRenderer>();
+
       filter = veinsObject.AddComponent<MeshFilter>();
+      filter.sharedMesh = new Mesh();
       filter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
       veinsObject.GetComponent<Renderer>().material = material;
 
@@ -208,24 +235,15 @@ public class GrowthManager : MonoBehaviour {
 
         // Points in a 3D grid ----------------------------------------------------------------------
         case AttractorsType.GRID:
-          float width = 1.5f;
-          float height = .8f;
-          float depth = 2f;
-
-          int xResolution = 8;
-          int yResolution = 6;
-          int zResolution = 8;
-          float jitterAmount = .1f;
-
-          for(int x = 0; x <= xResolution; x++) {
-            for(int y = 0; y <= yResolution; y++) {
-              for(int z = 0; z <= zResolution; z++) {
+          for(int x = 0; x <= GridXResolution; x++) {
+            for(int y = 0; y <= GridYResolution; y++) {
+              for(int z = 0; z <= GridZResolution; z++) {
                 _attractors.Add(
                   new Attractor(
                     new Vector3(
-                      x * (width/xResolution) - width/2 + Random.Range(-jitterAmount, jitterAmount),
-                      y * (height/yResolution) - height/2 + Random.Range(-jitterAmount, jitterAmount),
-                      z * (depth/zResolution) - depth/2 + Random.Range(-jitterAmount, jitterAmount)
+                      x * (GridWidth/GridXResolution) - GridWidth/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
+                      y * (GridHeight/GridYResolution) - GridHeight/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount),
+                      z * (GridDepth/GridZResolution) - GridDepth/2 + UnityEngine.Random.Range(-GridJitterAmount, GridJitterAmount)
                     )
                   )
                 );
@@ -237,8 +255,8 @@ public class GrowthManager : MonoBehaviour {
 
         // Points in a sphere ----------------------------------------------------------------------
         case AttractorsType.SPHERE:
-          for (int i = 0; i < 1000; i++) {
-            _attractors.Add(new Attractor(Random.insideUnitSphere * .75f));
+          for (int i = 0; i < AttractorSphereCount; i++) {
+            _attractors.Add(new Attractor(UnityEngine.Random.insideUnitSphere * AttractorSphereRadius));
           }
 
           break;
@@ -262,19 +280,19 @@ public class GrowthManager : MonoBehaviour {
             // Inside-out raycasting
             case AttractorRaycastingType.OUTWARDS:
               startingPoint = new Vector3(0f,.5f,0);
-              targetPoint = Random.onUnitSphere * 100f;
+              targetPoint = UnityEngine.Random.onUnitSphere * 100f;
               break;
 
             // Outside-in raycasting
             case AttractorRaycastingType.INWARDS:
-              startingPoint = Random.onUnitSphere * 100f;
-              targetPoint = Random.onUnitSphere * .1f;
+              startingPoint = UnityEngine.Random.onUnitSphere * 100f;
+              targetPoint = UnityEngine.Random.onUnitSphere * .1f;
               break;
 
             // Dome (upper hemisphere of a sphere)
             case AttractorRaycastingType.DOME:
-              startingPoint = Random.onUnitSphere * 100f;
-              targetPoint = Random.onUnitSphere * .1f;
+              startingPoint = UnityEngine.Random.onUnitSphere * 100f;
+              targetPoint = UnityEngine.Random.onUnitSphere * .1f;
 
               if(startingPoint.y < 0) {
                 continue;
@@ -364,8 +382,8 @@ public class GrowthManager : MonoBehaviour {
 
           for(int i=0; i<numRoots; i++) {
             do {
-              Vector3 startingPoint = Random.onUnitSphere * 5;
-              Vector3 targetPoint = Random.onUnitSphere * .5f;
+              Vector3 startingPoint = UnityEngine.Random.onUnitSphere * 5;
+              Vector3 targetPoint = UnityEngine.Random.onUnitSphere * .5f;
 
               isHit = Physics.Raycast(
                 startingPoint,
@@ -660,6 +678,10 @@ public class GrowthManager : MonoBehaviour {
         _attractors.Remove(attractor);
       }
 
+      if(_attractorsToRemove.Count > 0) {
+        Debug.Log(_attractors.Count);
+      }
+
       Profiler.EndSample();
     }
 
@@ -930,9 +952,11 @@ public class GrowthManager : MonoBehaviour {
   }
 
   public void GrowInEditor() {
-    for(int i=0; i<10; i++) {
+    for(int i=0; i<50; i++) {
       Update();
     }
+
+    // isPaused = true;
   }
 
 
@@ -971,8 +995,8 @@ public class GrowthManager : MonoBehaviour {
   ========================
   */
   private void TriggerClick(SteamVR_Action_Boolean fromAction, SteamVR_Input_Sources fromSource) {
-    for(int i=0; i<10; i++) {
-      Attractor newAttractor = new Attractor(controller.position + Random.onUnitSphere * 2);
+    for(int i=0; i<50; i++) {
+      Attractor newAttractor = new Attractor(controller.position + UnityEngine.Random.onUnitSphere * 2);
       newAttractor.age = 0;
 
       _attractors.Add(newAttractor);
@@ -988,5 +1012,110 @@ public class GrowthManager : MonoBehaviour {
 
   private void ResetVR(SteamVR_Action_Boolean fromAction, SteamVR_Input_Sources fromSource) {
     ResetScene();
+  }
+
+  /*
+  =====================
+    OBJ EXPORT
+    https://forum.unity.com/threads/export-obj-while-runtime.252262/
+  =====================
+  */
+  struct ObjMaterial {
+    public string name;
+    public string textureName;
+  }
+
+  private int vertexOffset = 0;
+  private int normalOffset = 0;
+  private int uvOffset = 0;
+
+  string MeshToString(MeshFilter mf, Dictionary<string, ObjMaterial> materialList) {
+    Mesh m = mf.sharedMesh;
+    Material[] mats = mf.GetComponent<Renderer>().sharedMaterials;
+    StringBuilder sb = new StringBuilder();
+
+    sb.Append("g ").Append(mf.name).Append("\n");
+
+    foreach (Vector3 lv in m.vertices) {
+      Vector3 wv = mf.transform.TransformPoint(lv);
+
+      //This is sort of ugly - inverting x-component since we're in
+      //a different coordinate system than "everyone" is "used to".
+      sb.Append(string.Format("v {0} {1} {2}\n", -wv.x, wv.y, wv.z));
+    }
+
+    sb.Append("\n");
+
+    foreach (Vector3 lv in m.normals) {
+      Vector3 wv = mf.transform.TransformDirection(lv);
+      sb.Append(string.Format("vn {0} {1} {2}\n", -wv.x, wv.y, wv.z));
+    }
+
+    sb.Append("\n");
+
+    foreach (Vector3 v in m.uv) {
+      sb.Append(string.Format("vt {0} {1}\n", v.x, v.y));
+    }
+
+    for (int material = 0; material < m.subMeshCount; material++) {
+      sb.Append("\n");
+      sb.Append("usemtl ").Append(mats[material].name).Append("\n");
+      sb.Append("usemap ").Append(mats[material].name).Append("\n");
+
+      //See if this material is already in the materiallist.
+      try {
+        ObjMaterial objMaterial = new ObjMaterial();
+
+        objMaterial.name = mats[material].name;
+
+        if (mats[material].mainTexture) {
+          // objMaterial.textureName = EditorUtility.GetAssetPath(mats[material].mainTexture);
+        } else {
+          objMaterial.textureName = null;
+        }
+
+        materialList.Add(objMaterial.name, objMaterial);
+      } catch (ArgumentException) {
+        //Already in the dictionary
+      }
+
+
+      int[] triangles = m.GetTriangles(material);
+      for (int i = 0; i < triangles.Length; i += 3) {
+        //Because we inverted the x-component, we also needed to alter the triangle winding.
+        sb.Append(string.Format("f {1}/{1}/{1} {0}/{0}/{0} {2}/{2}/{2}\n",
+                               triangles[i] + 1 + vertexOffset, triangles[i + 1] + 1 + normalOffset, triangles[i + 2] + 1 + uvOffset));
+      }
+    }
+
+    vertexOffset += m.vertices.Length;
+    normalOffset += m.normals.Length;
+    uvOffset += m.uv.Length;
+
+    return sb.ToString();
+  }
+
+  void Clear() {
+    vertexOffset = 0;
+    normalOffset = 0;
+    uvOffset = 0;
+  }
+
+  Dictionary<string, ObjMaterial> PrepareFileWrite() {
+    Clear();
+    return new Dictionary<string, ObjMaterial>();
+  }
+
+  void MeshToFile(MeshFilter mf) {
+    Dictionary<string, ObjMaterial> materialList = PrepareFileWrite();
+
+    using (StreamWriter sw = new StreamWriter(Application.dataPath + "/ExportedModels/veins.obj")) {
+      sw.Write("mtllib ./veins.mtl\n");
+      sw.Write(MeshToString(mf, materialList));
+    }
+  }
+
+  public void ExportOBJ() {
+    MeshToFile(filter);
   }
 }

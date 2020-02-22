@@ -19,6 +19,10 @@ public class GrowthManagerEditor : Editor {
         manager.ResetScene();
       }
 
+      if(GUILayout.Button("Export")) {
+        manager.ExportOBJ();
+      }
+
     EditorGUILayout.EndHorizontal();
   }
 }
